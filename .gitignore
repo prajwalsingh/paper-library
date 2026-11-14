@@ -1,0 +1,14 @@
+# Build output (attach zips to GitHub releases instead of committing them)
+dist/
+
+# Never commit private keys (the manifest only contains the PUBLIC key)
+*.pem
+
+# OS / editor clutter
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+node_modules/
+__pycache__/

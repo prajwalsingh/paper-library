@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Paper Library</title>
+  <link rel="icon" href="icons/icon32.png">
+  <link rel="stylesheet" href="viewer.css">
+  <link rel="stylesheet" href="library.css">
+  <script src="js/theme.js"></script>
+  <script type="module" src="library.js"></script>
+</head>
+<body class="library">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-sun" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.4"/><path stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="M13.2 9.6A5.5 5.5 0 0 1 6.4 2.8a5.5 5.5 0 1 0 6.8 6.8z"/></symbol>
+    <symbol id="i-auto" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path fill="currentColor" d="M8 2.5a5.5 5.5 0 0 1 0 11z"/></symbol>
+    <symbol id="i-all" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="M3.5 2.5h6l3 3v8h-9z"/><path fill="none" stroke="currentColor" stroke-width="1.4" d="M9.5 2.5v3h3"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M8 5v3.2l2 1.3"/></symbol>
+    <symbol id="i-book" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="M4 2.5h8.5v11H4A1.5 1.5 0 0 1 2.5 12V4A1.5 1.5 0 0 1 4 2.5zM2.5 12A1.5 1.5 0 0 1 4 10.5h8.5"/></symbol>
+    <symbol id="i-star" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" d="m8 2 1.8 3.8 4.1.5-3 2.8.8 4.1L8 11.2 4.3 13.2l.8-4.1-3-2.8 4.1-.5z"/></symbol>
+    <symbol id="i-star-fill" viewBox="0 0 16 16"><path fill="currentColor" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" d="m8 2 1.8 3.8 4.1.5-3 2.8.8 4.1L8 11.2 4.3 13.2l.8-4.1-3-2.8 4.1-.5z"/></symbol>
+    <symbol id="i-inbox" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="M2.5 9 4 3.5h8L13.5 9v3.5h-11zM2.5 9h3l1 1.5h3l1-1.5h3"/></symbol>
+    <symbol id="i-dup" viewBox="0 0 16 16"><rect x="5.5" y="5.5" width="8" height="8" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.4"/><path fill="none" stroke="currentColor" stroke-width="1.4" d="M10.5 3.5V3a.5.5 0 0 0-.5-.5H3a.5.5 0 0 0-.5.5v7a.5.5 0 0 0 .5.5h.5"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="M2.5 4a1 1 0 0 1 1-1h3l1.5 1.5h4.5a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1z"/></symbol>
+    <symbol id="i-tri" viewBox="0 0 16 16"><path fill="currentColor" d="m6 4 5 4-5 4z"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 16 16"><path stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M3.5 8h9M8 3.5v9"/></symbol>
+    <symbol id="i-plus-circle" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.6" fill="none" stroke="currentColor" stroke-width="1.3"/><path stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M5.5 8h5M8 5.5v5"/></symbol>
+    <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="m10.2 10.2 3.3 3.3"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M8 10.5V3M5 6l3-3 3 3M3 10.5v2h10v-2"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M13 8a5 5 0 1 1-1.5-3.6M13 3v2.5h-2.5"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.2" fill="none" stroke="currentColor" stroke-width="1.4"/><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M3.6 12.4l1.2-1.2M11.2 4.8l1.2-1.2"/></symbol>
+    <symbol id="i-pdf" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" d="M3.5 1.5h6l3 3v6"/><path fill="none" stroke="currentColor" stroke-width="1.3" d="M9.5 1.5v3h3M3.5 1.5v13h5"/><circle cx="12" cy="12.5" r="2.6" fill="none" stroke="currentColor" stroke-width="1.2"/><path stroke="currentColor" stroke-width="1.2" stroke-linecap="round" d="M12 11.3v2.4M10.8 12.5h2.4"/></symbol>
+    <symbol id="i-more" viewBox="0 0 16 16"><circle cx="3.5" cy="8" r="1.2" fill="currentColor"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/><circle cx="12.5" cy="8" r="1.2" fill="currentColor"/></symbol>
+    <symbol id="i-close" viewBox="0 0 16 16"><path stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="m4 4 8 8M12 4l-8 8"/></symbol>
+    <symbol id="i-check" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="m3 8.5 3.2 3L13 4.5"/></symbol>
+  </svg>
+
+  <!-- ===================== Library ===================== -->
+  <div id="lib" hidden>
+    <aside id="libSide">
+      <div class="side-brand">
+        <img src="icons/icon32.png" alt="" width="22" height="22">
+        <span>Paper Library</span>
+      </div>
+      <nav class="side-scroll">
+        <ul class="nav-list" id="navList">
+          <li data-view="all"><svg><use href="#i-all"/></svg>All References<span class="n"></span></li>
+          <li data-view="added"><svg><use href="#i-clock"/></svg>Recently Added<span class="n"></span></li>
+          <li data-view="read"><svg><use href="#i-book"/></svg>Recently Read<span class="n"></span></li>
+          <li data-view="favorites"><svg><use href="#i-star"/></svg>Favorites<span class="n"></span></li>
+          <li data-view="unsorted"><svg><use href="#i-inbox"/></svg>Unsorted<span class="n"></span></li>
+          <li data-view="duplicates"><svg><use href="#i-dup"/></svg>Duplicates<span class="n"></span></li>
+          <li data-view="trash"><svg><use href="#i-trash"/></svg>Trash<span class="n"></span></li>
+        </ul>
+        <div class="side-heading" title="Drop a collection here to move it to the top level">COLLECTIONS</div>
+        <ul class="tree" id="tree"></ul>
+        <button id="newCollection" class="link-btn"><svg><use href="#i-plus-circle"/></svg>Create collection</button>
+      </nav>
+      <div class="side-foot">
+        <span id="userEmail" class="muted"></span>
+        <button id="btnTheme" class="tb-btn" title="Theme"><svg><use href="#i-auto"/></svg></button>
+        <button id="btnSettings" class="tb-btn" title="Settings"><svg><use href="#i-gear"/></svg></button>
+      </div>
+    </aside>
+
+    <main id="libMain">
+      <header class="lib-head">
+        <div id="crumbs" class="crumbs"></div>
+        <div class="lib-search">
+          <svg><use href="#i-search"/></svg>
+          <input id="search" type="search" placeholder="Search title, author, source, year…" autocomplete="off">
+        </div>
+        <button id="btnRefresh" class="tb-btn" title="Reload from Drive"><svg><use href="#i-refresh"/></svg></button>
+        <button id="btnImportFolder" class="btn" title="Upload a whole folder from your computer; its subfolders become collections">Import folder</button>
+        <button id="btnAdd" class="btn primary"><svg><use href="#i-upload"/></svg>Add PDFs</button>
+        <input id="fileInput" type="file" accept="application/pdf,.pdf" multiple hidden>
+        <input id="folderInput" type="file" webkitdirectory multiple hidden>
+      </header>
+
+      <div id="bulkBar" class="bulk-bar" hidden>
+        <span id="bulkCount"></span>
+        <button class="btn" data-bulk="move">Move to…</button>
+        <button class="btn" data-bulk="add">Also add to…</button>
+        <button class="btn" data-bulk="remove">Remove from collection</button>
+        <button class="btn" data-bulk="lookup">Look up details</button>
+        <button class="btn" data-bulk="trash">Move to Trash</button>
+        <button class="btn" data-bulk="restore">Restore</button>
+        <span class="grow"></span>
+        <button class="tb-btn" data-bulk="clear" title="Clear selection"><svg><use href="#i-close"/></svg></button>
+      </div>
+
+      <div id="tableWrap">
+        <table id="paperTable">
+          <thead>
+            <tr>
+              <th class="c-check"><input type="checkbox" id="checkAll" aria-label="Select all"></th>
+              <th class="c-dot"></th>
+              <th class="c-star"></th>
+              <th class="c-authors sortable" data-sort="authors">Authors</th>
+              <th class="c-year sortable" data-sort="year">Year</th>
+              <th class="c-title sortable" data-sort="title">Title</th>
+              <th class="c-source sortable" data-sort="source">Source</th>
+              <th class="c-added sortable" data-sort="added">Added</th>
+              <th class="c-file">File</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+        <div id="emptyState" class="empty" hidden></div>
+      </div>
+
+      <div id="dropOverlay" class="drop-overlay" hidden><div>Drop PDFs or folders to upload into <b id="dropTarget"></b></div></div>
+    </main>
+
+    <aside id="details" hidden>
+      <div class="det-head">
+        <span>Details</span>
+        <button id="detClose" class="tb-btn" title="Close"><svg><use href="#i-close"/></svg></button>
+      </div>
+      <div class="det-body">
+        <label>Title<textarea id="dTitle" rows="3"></textarea></label>
+        <label>Authors <span class="hint">one per line, “Last, First”</span><textarea id="dAuthors" rows="4"></textarea></label>
+        <div class="det-row">
+          <label>Year<input id="dYear" type="text" inputmode="numeric"></label>
+          <label class="grow">Source<input id="dSource" type="text"></label>
+        </div>
+        <label>DOI<input id="dDoi" type="text"></label>
+        <label>arXiv ID<input id="dArxiv" type="text"></label>
+        <div class="det-actions">
+          <button id="dSave" class="btn primary">Save details</button>
+          <button id="dLookup" class="btn">Look up online</button>
+        </div>
+        <div id="dStatus" class="muted small"></div>
+        <hr>
+        <div class="det-file">
+          <div class="small muted">File</div>
+          <div id="dFile" class="fname"></div>
+          <div id="dColls" class="chips"></div>
+          <div class="det-actions">
+            <button id="dOpen" class="btn primary">Open &amp; highlight</button>
+            <button id="dDrive" class="btn">Show in Drive</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div id="tasks" class="tasks" hidden>
+    <div class="tasks-head"><span id="tasksTitle"></span><button id="tasksToggle" class="link-btn">Details</button></div>
+    <div class="progress"><div id="tasksBar"></div></div>
+    <ul id="tasksList" hidden></ul>
+  </div>
+
+  <div id="collMenu" class="popover menu" hidden>
+    <button data-cmd="new">New sub-collection</button>
+    <button data-cmd="rename">Rename</button>
+    <button data-cmd="move">Move to…</button>
+    <button data-cmd="upload">Add PDFs here</button>
+    <hr>
+    <button data-cmd="delete" class="danger-text">Delete collection</button>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <dialog id="dialog">
+    <form method="dialog">
+      <h3 data-role="title"></h3>
+      <div data-role="body"></div>
+      <div class="dlg-actions" data-role="actions"></div>
+    </form>
+  </dialog>
+
+  <!-- ===================== Loading / setup ===================== -->
+  <div id="loading" class="center-screen">
+    <div class="spinner"></div>
+    <div id="loadingText">Loading your library…</div>
+  </div>
+
+  <div id="home" class="page-screen" hidden>
+    <header class="home-head">
+      <img src="icons/icon48.png" alt="" width="32" height="32">
+      <h1>Paper Library</h1>
+    </header>
+    <section id="setupCard" class="card" hidden>
+      <h2>One-time setup: connect to Google Drive</h2>
+      <p>The extension needs its own Google “OAuth client” so it may read and update your Drive PDFs.
+         Full step-by-step guide with troubleshooting: <a href="https://github.com/prajwalsingh/paper-library/blob/main/docs/SETUP.md" target="_blank">docs/SETUP.md</a>.</p>
+      <ol>
+        <li>In <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a>, create a project and enable the <b>Google Drive API</b>.</li>
+        <li>Configure the OAuth consent screen and add yourself as a test user (or choose “Internal” for a Workspace account).</li>
+        <li>Create credentials → OAuth client ID → <b>Web application</b>, and add this <b>Authorized redirect URI</b>:
+          <div class="copy-row"><code id="redirectUri"></code><button class="btn" data-copy="redirectUri">Copy</button></div>
+        </li>
+        <li>Paste the client ID here:</li>
+      </ol>
+      <div class="input-row">
+        <input id="clientIdInput" type="text" placeholder="1234567890-abc….apps.googleusercontent.com">
+        <button id="saveClientId" class="btn primary">Save</button>
+      </div>
+    </section>
+    <section id="signinCard" class="card" hidden>
+      <h2>Sign in</h2>
+      <p>Sign in with the Google account whose Drive should hold your library. A folder called
+         <b>Paper Library</b> is created there on first use.</p>
+      <button id="signinBtn" class="btn primary">Sign in with Google</button>
+      <p id="signinError" class="error"></p>
+    </section>
+  </div>
+</body>
+</html>

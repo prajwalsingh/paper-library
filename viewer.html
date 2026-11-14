@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Paper Library</title>
+  <link rel="icon" href="icons/icon32.png">
+  <link rel="stylesheet" href="lib/pdfjs/pdf_viewer.css">
+  <link rel="stylesheet" href="viewer.css">
+  <script src="js/theme.js"></script>
+  <script type="module" src="viewer.js"></script>
+</head>
+<body>
+  <!-- Icon sprite (inline so the page needs no network) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-sun" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.4"/><path stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="M13.2 9.6A5.5 5.5 0 0 1 6.4 2.8a5.5 5.5 0 1 0 6.8 6.8z"/></symbol>
+    <symbol id="i-auto" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path fill="currentColor" d="M8 2.5a5.5 5.5 0 0 1 0 11z"/></symbol>
+    <symbol id="i-sidebar" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.4" d="M2.5 3.5h11v9h-11zM6.5 3.5v9"/></symbol>
+    <symbol id="i-left" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M10 3 5 8l5 5"/></symbol>
+    <symbol id="i-right" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="m6 3 5 5-5 5"/></symbol>
+    <symbol id="i-up" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="m3 10 5-5 5 5"/></symbol>
+    <symbol id="i-down" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="m3 6 5 5 5-5"/></symbol>
+    <symbol id="i-back" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M7 4 3 8l4 4M3 8h10"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 16 16"><path stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M3.5 8h9"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 16 16"><path stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M3.5 8h9M8 3.5v9"/></symbol>
+    <symbol id="i-marker" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="m9.5 2.5 4 4-5.5 5.5H5v-2.6z"/><path fill="none" stroke="currentColor" stroke-width="1.4" d="m4 13.5-1.5 0 1-1.5"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M5.5 3 2.5 6l3 3"/><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" d="M3 6h6.5a4 4 0 0 1 0 8H7"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="m10.5 3 3 3-3 3"/><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" d="M13 6H6.5a4 4 0 0 0 0 8H9"/></symbol>
+    <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="m10.2 10.2 3.3 3.3"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 16 16"><path stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M3 4.5h10M3 8h10M3 11.5h10"/></symbol>
+    <symbol id="i-close" viewBox="0 0 16 16"><path stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="m4 4 8 8M12 4l-8 8"/></symbol>
+    <symbol id="i-check" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="m3 8.5 3.2 3L13 4.5"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="M4.5 12.5h7.2a2.8 2.8 0 0 0 .3-5.6A4 4 0 0 0 4.3 7a2.8 2.8 0 0 0 .2 5.5z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 16 16"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path fill="none" stroke="currentColor" stroke-width="1.4" d="M10.5 3.5V3A1.5 1.5 0 0 0 9 1.5H4A1.5 1.5 0 0 0 2.5 3v5A1.5 1.5 0 0 0 4 9.5h.5"/></symbol>
+    <symbol id="i-note" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"/></symbol>
+  </svg>
+
+  <!-- ===================== Viewer ===================== -->
+  <div id="app" hidden>
+    <header id="toolbar" class="toolbar">
+      <div class="tb-group">
+        <button id="btnSidebar" class="tb-btn" title="Sidebar (F9)"><svg><use href="#i-sidebar"/></svg></button>
+        <button id="btnBack" class="tb-btn" title="Back (Alt+←)"><svg><use href="#i-back"/></svg></button>
+        <span class="tb-sep"></span>
+        <button id="btnPrev" class="tb-btn" title="Previous page"><svg><use href="#i-up"/></svg></button>
+        <button id="btnNext" class="tb-btn" title="Next page"><svg><use href="#i-down"/></svg></button>
+        <div class="page-nav">
+          <input id="pageInput" type="text" inputmode="numeric" value="1" aria-label="Page number">
+          <span>of <span id="pageCount">–</span></span>
+        </div>
+      </div>
+
+      <div class="tb-group tb-center">
+        <div class="linked">
+          <button id="btnZoomOut" class="tb-btn" title="Zoom out (Ctrl −)"><svg><use href="#i-minus"/></svg></button>
+          <select id="zoomSelect" aria-label="Zoom">
+            <option value="auto">Automatic</option>
+            <option value="page-fit">Fit page</option>
+            <option value="page-width">Fit width</option>
+            <option value="page-actual">Actual size</option>
+            <option value="0.5">50%</option>
+            <option value="0.75">75%</option>
+            <option value="1">100%</option>
+            <option value="1.25">125%</option>
+            <option value="1.5">150%</option>
+            <option value="2">200%</option>
+            <option value="3">300%</option>
+            <option value="4">400%</option>
+            <option id="customZoom" value="custom" hidden></option>
+          </select>
+          <button id="btnZoomIn" class="tb-btn" title="Zoom in (Ctrl +)"><svg><use href="#i-plus"/></svg></button>
+        </div>
+        <span class="tb-sep"></span>
+        <div class="linked">
+          <button id="btnHlMode" class="tb-btn hl-mode" title="Highlight tool (H): select text to highlight it">
+            <svg><use href="#i-marker"/></svg><span class="color-dot" id="hlColorDot"></span>
+          </button>
+          <button id="btnColor" class="tb-btn narrow" title="Highlight color"><svg><use href="#i-down"/></svg></button>
+        </div>
+        <button id="btnUndo" class="tb-btn" title="Undo (Ctrl Z)"><svg><use href="#i-undo"/></svg></button>
+        <button id="btnRedo" class="tb-btn" title="Redo (Ctrl Shift Z)"><svg><use href="#i-redo"/></svg></button>
+      </div>
+
+      <div class="tb-group tb-right">
+        <span id="docTitle" class="doc-title"></span>
+        <button id="saveStatus" class="save-status" title="Save to Drive now (Ctrl S)">
+          <svg><use href="#i-cloud"/></svg><span id="saveText">Saved</span>
+        </button>
+        <button id="btnFind" class="tb-btn" title="Find (Ctrl F)"><svg><use href="#i-search"/></svg></button>
+        <button id="btnMenu" class="tb-btn" title="Menu"><svg><use href="#i-menu"/></svg></button>
+      </div>
+    </header>
+
+    <div id="banner" class="banner" hidden></div>
+
+    <div id="main">
+      <aside id="sidebar">
+        <div class="side-tabs" role="tablist">
+          <button data-tab="thumbs" class="active" role="tab">Pages</button>
+          <button data-tab="outline" role="tab">Outline</button>
+          <button data-tab="highlights" role="tab">Highlights <span id="hlCount" class="count"></span></button>
+        </div>
+        <div id="panel-thumbs" class="side-panel"></div>
+        <div id="panel-outline" class="side-panel" hidden></div>
+        <div id="panel-highlights" class="side-panel" hidden></div>
+      </aside>
+
+      <div id="viewerContainer" tabindex="0">
+        <div id="viewer" class="pdfViewer"></div>
+      </div>
+
+      <div id="findbar" class="findbar" hidden>
+        <svg class="find-icon"><use href="#i-search"/></svg>
+        <input id="findInput" type="search" placeholder="Find in document…" autocomplete="off">
+        <span id="findCount" class="find-count"></span>
+        <button id="findPrev" class="tb-btn" title="Previous (Shift Enter)"><svg><use href="#i-up"/></svg></button>
+        <button id="findNext" class="tb-btn" title="Next (Enter)"><svg><use href="#i-down"/></svg></button>
+        <button id="findClose" class="tb-btn" title="Close (Esc)"><svg><use href="#i-close"/></svg></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating popovers -->
+  <div id="selPopover" class="popover" hidden>
+    <div class="swatches" data-role="sel-swatches"></div>
+    <span class="pop-sep"></span>
+    <button class="icon-btn" data-action="copy" title="Copy text"><svg><use href="#i-copy"/></svg></button>
+  </div>
+
+  <div id="hlPopover" class="popover hl-popover" hidden>
+    <div class="row">
+      <div class="swatches" data-role="hl-swatches"></div>
+      <span class="pop-sep"></span>
+      <button class="icon-btn" data-action="copy" title="Copy highlighted text"><svg><use href="#i-copy"/></svg></button>
+      <button class="icon-btn danger" data-action="delete" title="Delete highlight (Del)"><svg><use href="#i-trash"/></svg></button>
+    </div>
+    <textarea data-role="note" rows="3" placeholder="Add a note…"></textarea>
+    <div class="meta" data-role="meta"></div>
+  </div>
+
+  <div id="colorMenu" class="popover menu" hidden>
+    <div class="swatches" data-role="menu-swatches"></div>
+  </div>
+
+  <div id="mainMenu" class="popover menu" hidden>
+    <button data-action="save"><svg><use href="#i-cloud"/></svg>Save to Drive now<kbd>Ctrl S</kbd></button>
+    <label class="menu-check"><input type="checkbox" id="optAutosave"> Autosave to Drive</label>
+    <div class="menu-row">Theme
+      <div class="seg" id="themeSeg" role="group" aria-label="Theme">
+        <button data-theme-set="system" title="Follow the system setting">System</button>
+        <button data-theme-set="light">Light</button>
+        <button data-theme-set="dark">Dark</button>
+      </div>
+    </div>
+    <label class="menu-check" title="Inverts the page colours for reading in the dark"><input type="checkbox" id="optNight"> Night mode (dark pages)</label>
+    <hr>
+    <button data-action="copy">Save a copy to Drive…</button>
+    <button data-action="download">Download PDF with highlights</button>
+    <button data-action="drive">Open in Google Drive</button>
+    <button data-action="reload">Reload from Drive</button>
+    <hr>
+    <button data-action="home">Paper Library</button>
+    <button data-action="shortcuts">Keyboard shortcuts</button>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <dialog id="dialog">
+    <form method="dialog">
+      <h3 data-role="title"></h3>
+      <div data-role="body"></div>
+      <div class="dlg-actions" data-role="actions"></div>
+    </form>
+  </dialog>
+
+  <!-- ===================== Loading ===================== -->
+  <div id="loading" class="center-screen">
+    <div class="spinner"></div>
+    <div id="loadingText">Loading…</div>
+    <div class="progress"><div id="loadingBar"></div></div>
+    <button id="loadingSignin" class="btn primary" hidden>Sign in with Google</button>
+  </div>
+
+  <div id="errorScreen" class="center-screen" hidden>
+    <h2 id="errorTitle">Couldn’t open this PDF</h2>
+    <p id="errorText" class="muted"></p>
+    <div class="settings-actions">
+      <button id="errorRetry" class="btn primary">Try again</button>
+      <button id="errorHome" class="btn">Paper Library</button>
+    </div>
+  </div>
+</body>
+</html>
