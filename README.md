@@ -103,6 +103,14 @@ In short: create a Google Cloud project → enable the Drive API → create a
 "Web application" OAuth client with the redirect URI shown on the setup page →
 paste the client ID → **Sign in with Google**.
 
+> [!TIP]
+> **Save your client ID somewhere private**, such as a password manager or a private note.
+> On a new computer you then only install the extension and paste the same client ID. No new
+> Google Cloud setup is needed, because the extension ID (and so the redirect URI) is the same everywhere.
+> **Don't make it public** (in a repository, issue, screenshot or chat). It isn't a password, but
+> it identifies *your* Google project. Keeping it private means nobody else can build on your
+> project or use up its limits.
+
 ### 4. Use it
 
 - **Toolbar icon** → opens the **library**. On a Drive file page, it opens that PDF instead.

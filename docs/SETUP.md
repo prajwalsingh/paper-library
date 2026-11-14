@@ -69,6 +69,26 @@ It can take a few minutes before a new client works.
 
 The library opens, and a **Paper Library** folder is created in your My Drive.
 
+## Keep your client ID for next time
+
+**Save the client ID somewhere private**, such as a password manager or a private note.
+You need it again whenever you set up Paper Library on another computer or browser profile:
+
+1. Install the extension there ([README → Install](../README.md#install)).
+2. Click the toolbar icon, paste **the same client ID**, and sign in.
+
+That's all. The extension ID, and therefore the redirect URI, is identical on every
+computer, so the OAuth client you already created works as is. If you sign in with a
+*different* Google account and your project is **External**, first add that account as a
+**Test user** (step 3).
+
+**Don't publish it.** Keep the client ID out of public repositories, issues,
+screenshots and chats. A client ID isn't a password (it can't open your Drive by
+itself, and only your test users can sign in), but it identifies *your* Google Cloud
+project. Keeping it private stops others from reusing your project or using up its
+limits. If it does leak, delete the client in **Google Auth Platform → Clients**,
+create a new one (step 4), and paste the new ID into the extension.
+
 ## Sharing with friends or lab mates
 
 You can either:
