@@ -179,3 +179,15 @@ body.library { overflow: hidden; }
   .c-authors, .c-added { display: none; }
   .lib-search input { width: 180px; }
 }
+
+/* Choosing the cloud (home screen) */
+.cloud-pick { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 10px 0 6px; }
+.cloud-opt {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 12px 14px; text-align: left;
+  border: 1.5px solid var(--border, #8884); border-radius: 10px; background: var(--bg); color: inherit; cursor: pointer; font: inherit;
+}
+.cloud-opt b { font-size: 15px; }
+.cloud-opt span { font-size: 12px; opacity: .75; }
+.cloud-opt:hover { border-color: var(--accent); }
+.cloud-opt.chosen { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--bg)); }
+.cloud-opt.chosen b::after { content: ' ✓'; color: var(--accent); }

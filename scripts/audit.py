@@ -52,15 +52,25 @@ for f in OWN_CODE:
             if host in ('www.w3.org',):  # XML namespace strings, not requests
                 continue
             found.setdefault(host, []).append(f'{f.relative_to(ROOT)}:{n}')
+def allowed_by_lock(host):
+    for src in connect:
+        h = src.split('//')[1].split('/')[0]
+        # "*.sharepoint.com" allows any sub-domain of sharepoint.com (Microsoft's storage servers)
+        if host == h or (h.startswith('*.') and host.endswith(h[1:])):
+            return True
+    return False
+
+
 for host, where in sorted(found.items()):
-    allowed = any(host == s.split('//')[1].split('/')[0] for s in connect)
+    allowed = allowed_by_lock(host)
     kind = 'data connection (allowed by the lock)' if allowed else 'link / sign-in page only (no data sent by code)'
     print(f'{host:28} {kind}')
     for w in where[:4]:
         print(f'{"":30}{w}')
-unexpected = [h for h in found if not any(h == s.split('//')[1].split('/')[0] for s in connect)
+unexpected = [h for h in found if not allowed_by_lock(h)
               and h not in ('drive.google.com', 'accounts.google.com', 'console.cloud.google.com',
                             'github.com', 'myaccount.google.com',
+                            'entra.microsoft.com', 'account.live.com', 'myapps.microsoft.com', 'onedrive.live.com',
                             # links written into exported Markdown notes (js/export.js), never fetched
                             'doi.org', 'arxiv.org')]
 print('\nUnexpected hosts:', ', '.join(unexpected) if unexpected else 'none')

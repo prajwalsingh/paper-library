@@ -16,17 +16,23 @@ import {
   LinkTarget,
   FindState,
 } from './lib/pdfjs/pdf_viewer.mjs';
-import * as auth from './js/auth.js';
-import * as drive from './js/drive.js';
+import { loadProvider, relabel } from './js/provider.js';
 import { splitHighlights, applyHighlights, newId } from './js/annotations.js';
 import { textInRects, buildMarkdown, markdownFileName, downloadText } from './js/export.js';
-import { decodeMeta } from './js/library-drive.js';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('./lib/pdfjs/pdf.worker.min.mjs', import.meta.url).href;
 
 // When this page is served outside the extension (for local testing) we read
 // a PDF from ?src=… and keep "saves" in memory instead of talking to Drive.
 const IN_EXTENSION = typeof chrome !== 'undefined' && !!chrome.runtime?.id;
+
+// Which cloud the file is in: ?p=onedrive, otherwise Google Drive (links from
+// the Drive page button carry no p). `drive` is that cloud's file module.
+const CLOUD = await loadProvider(new URLSearchParams(location.search).get('p') || 'gdrive');
+const { auth, files: drive, library } = CLOUD;
+/** "Save to Drive" → "Save to OneDrive" when the file is in OneDrive. */
+const C = (s) => (CLOUD.id === 'gdrive' ? s : s.replace(/Google Drive/g, CLOUD.label).replace(/\bDrive\b/g, CLOUD.short));
+const viewerUrl = (id) => `viewer.html?id=${encodeURIComponent(id)}${CLOUD.id === 'gdrive' ? '' : '&p=' + CLOUD.id}`;
 
 const COLORS = [
   { name: 'Yellow', hex: '#ffe14d' },
@@ -208,6 +214,7 @@ async function boot() {
   const id = params.get('id');
   const src = params.get('src');
   wireStaticUi();
+  relabel(document, CLOUD);
 
   if (!IN_EXTENSION) {
     if (src) return openDocument({ kind: 'url', src, name: params.get('name') });
@@ -248,7 +255,7 @@ async function loadUser() {
 
 async function openDocument(source) {
   showScreen('loading');
-  setLoading('Connecting to Google Drive…', null);
+  setLoading(C('Connecting to Google Drive…'), null);
   try {
     let bytes, meta;
     if (source.kind === 'drive') {
@@ -256,15 +263,15 @@ async function openDocument(source) {
         await auth.getToken({ interactive: false });
       } catch (e) {
         if (e.code === 'no-client-id') return location.replace('library.html');
-        await waitForSignIn('Sign in to Google Drive to open this PDF.');
+        await waitForSignIn(C('Sign in to Google Drive to open this PDF.'));
       }
-      setLoading('Connecting to Google Drive…', null);
+      setLoading(C('Connecting to Google Drive…'), null);
       [meta] = await Promise.all([drive.getMetadata(source.id), loadUser()]);
       if (meta.mimeType !== 'application/pdf') {
         throw new Error(`“${meta.name}” is not a PDF file (type: ${meta.mimeType}).`);
       }
       if (meta.capabilities?.canDownload === false) {
-        throw new Error('The owner of this file has disabled downloading, so it can only be viewed inside Drive.');
+        throw new Error(C('The owner of this file has disabled downloading, so it can only be viewed inside Drive.'));
       }
       document.title = meta.name;
       setLoading(`Downloading “${meta.name}”…`, 0);
@@ -284,7 +291,7 @@ async function openDocument(source) {
     state.revisionId = meta.headRevisionId;
     if (source.kind === 'drive' && state.editable) {
       // Remember when this paper was last opened (shown in the library as Recently Read).
-      drive.patchMetadata(meta.id, { properties: { dphLr: new Date().toISOString() } }).catch(() => {});
+      library.markRead(meta.id).catch(() => {});
     }
     state.editable = meta.capabilities?.canEdit !== false;
     document.title = meta.name;
@@ -323,7 +330,7 @@ function showBannerIfNeeded() {
   let msg = '';
   if (state.cannotWrite) msg = state.cannotWrite + ' You can still read it here.';
   else if (!state.editable)
-    msg = 'You have view-only access to this file. Highlights can’t be saved into it — use Menu → “Save a copy to Drive”.';
+    msg = C('You have view-only access to this file. Highlights can’t be saved into it — use Menu → “Save a copy to Drive”.');
   b.textContent = msg;
   b.hidden = !msg;
 }
@@ -748,13 +755,13 @@ function updateStatus() {
   const t = $('saveText');
   let cls, text, title;
   if (state.cannotWrite) [cls, text, title] = ['readonly', 'Read only', state.cannotWrite];
-  else if (!state.editable) [cls, text, title] = ['readonly', 'View only', 'You can’t edit this Drive file. Use Menu → Save a copy.'];
-  else if (state.saving) [cls, text, title] = ['saving', 'Saving…', 'Uploading to Google Drive'];
+  else if (!state.editable) [cls, text, title] = ['readonly', 'View only', C('You can’t edit this Drive file. Use Menu → Save a copy.')];
+  else if (state.saving) [cls, text, title] = ['saving', 'Saving…', C('Uploading to Google Drive')];
   else if (state.saveError) {
     const signIn = state.saveError.code === 'needs-sign-in';
     [cls, text, title] = ['error', signIn ? 'Sign in to save' : 'Save failed – retry', state.saveError.message];
-  } else if (isDirty()) [cls, text, title] = ['dirty', prefs.autosave ? 'Saving soon…' : 'Unsaved changes', 'Click to save to Drive now (Ctrl S)'];
-  else [cls, text, title] = ['saved', 'Saved to Drive', state.lastSavedAt ? `Last saved ${state.lastSavedAt.toLocaleTimeString()}` : 'All highlights are in the Drive file'];
+  } else if (isDirty()) [cls, text, title] = ['dirty', prefs.autosave ? 'Saving soon…' : 'Unsaved changes', C('Click to save to Drive now (Ctrl S)')];
+  else [cls, text, title] = ['saved', C('Saved to Drive'), state.lastSavedAt ? `Last saved ${state.lastSavedAt.toLocaleTimeString()}` : C('All highlights are in the Drive file')];
   s.className = 'save-status ' + cls;
   t.textContent = text;
   s.title = title;
@@ -768,7 +775,7 @@ async function buildPdfBytes() {
 async function save({ force = false, manual = false } = {}) {
   clearTimeout(state.saveTimer);
   if (!canSaveInPlace()) {
-    if (manual) toast(state.cannotWrite || 'View-only file: use Menu → “Save a copy to Drive”.');
+    if (manual) toast(state.cannotWrite || C('View-only file: use Menu → “Save a copy to Drive”.'));
     return;
   }
   if (state.saving) {
@@ -777,7 +784,7 @@ async function save({ force = false, manual = false } = {}) {
   }
   const snapshot = serialize();
   if (!force && snapshot === state.lastSavedJson) {
-    if (manual) toast('All highlights are already saved to Drive.');
+    if (manual) toast(C('All highlights are already saved to Drive.'));
     return;
   }
   state.saving = true;
@@ -823,13 +830,13 @@ async function handleConflict(current) {
   const who = current.lastModifyingUser?.displayName;
   const when = current.modifiedTime ? new Date(current.modifiedTime).toLocaleString() : '';
   const choice = await dialog({
-    title: 'This PDF changed on Drive',
+    title: C('This PDF changed on Drive'),
     body:
       `The file was modified${who ? ' by ' + who : ''}${when ? ' on ' + when : ''} after you opened it here. ` +
-      'Overwriting replaces that version with yours (Drive keeps the old one under “Manage versions”).',
+      C('Overwriting replaces that version with yours (Drive keeps the old one under “Manage versions”).'),
     actions: [
       { label: 'Cancel', value: 'cancel' },
-      { label: 'Reload from Drive', value: 'reload' },
+      { label: C('Reload from Drive'), value: 'reload' },
       { label: 'Save as copy', value: 'copy' },
       { label: 'Overwrite', value: 'overwrite', primary: true },
     ],
@@ -842,7 +849,7 @@ async function handleConflict(current) {
     return;
   }
   // Cancel: stop autosaving into a conflict until the user decides.
-  state.saveError = new Error('Not saved: the file changed on Drive. Click to choose what to do.');
+  state.saveError = new Error(C('Not saved: the file changed on Drive. Click to choose what to do.'));
   updateStatus();
 }
 
@@ -862,7 +869,7 @@ async function saveCopy() {
   });
   setTimeout(() => input.select(), 50);
   const choice = await dialog({
-    title: 'Save a copy to Drive',
+    title: C('Save a copy to Drive'),
     body: wrap,
     actions: [
       { label: 'Cancel', value: 'cancel' },
@@ -880,7 +887,7 @@ async function saveCopy() {
       created = await drive.createFile(input.value.trim() || 'Highlighted.pdf', bytes); // e.g. no write access to that folder
     }
     state.leaving = true;
-    location.href = `viewer.html?id=${encodeURIComponent(created.id)}`;
+    location.href = viewerUrl(created.id);
   } catch (e) {
     toast('Could not save a copy: ' + e.message, 5000);
   }
@@ -904,7 +911,7 @@ async function downloadPdf() {
 async function exportHighlights(how) {
   try {
     await fillHighlightTexts(state.highlights); // texts are found lazily; make sure all are there
-    const paper = { ...decodeMeta(state.meta?.properties), fileName: state.meta?.name };
+    const paper = { ...(IN_EXTENSION ? await library.paperDetails(state.meta).catch(() => ({})) : {}), fileName: state.meta?.name };
     const md = buildMarkdown(paper, state.highlights);
     if (how === 'copy') {
       await navigator.clipboard.writeText(md);
@@ -1255,7 +1262,7 @@ function wireStaticUi() {
         return toast('Sign-in failed: ' + e.message);
       }
     }
-    if (!canSaveInPlace()) return toast(state.cannotWrite || 'View-only file: use Menu → “Save a copy to Drive”.', 4000);
+    if (!canSaveInPlace()) return toast(state.cannotWrite || C('View-only file: use Menu → “Save a copy to Drive”.'), 4000);
     save({ manual: true });
   };
   $('btnMenu').onclick = (e) => {
@@ -1461,7 +1468,7 @@ function onKeyDown(e) {
 
   if (mod && key === 's') {
     e.preventDefault();
-    if (!canSaveInPlace()) toast(state.cannotWrite || 'View-only file: use Menu → “Save a copy to Drive”.');
+    if (!canSaveInPlace()) toast(state.cannotWrite || C('View-only file: use Menu → “Save a copy to Drive”.'));
     else save({ manual: true });
   } else if (mod && key === 'f') {
     e.preventDefault();
@@ -1512,7 +1519,7 @@ function showShortcuts() {
     ['Click a highlight', 'Change colour, add a note, delete'],
     ['Delete', 'Delete the selected highlight'],
     ['Ctrl Z / Ctrl Shift Z', 'Undo / redo'],
-    ['Ctrl S', 'Save to Drive now'],
+    ['Ctrl S', C('Save to Drive now')],
     ['Ctrl F', 'Find in document'],
     ['Ctrl + / Ctrl − / Ctrl 0', 'Zoom in / out / automatic'],
     ['Ctrl + mouse wheel', 'Zoom around the cursor'],

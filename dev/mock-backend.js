@@ -65,6 +65,7 @@ export async function loadLibrary() {
 export async function createFolder(name, parentId) { await sleep(100); return clone(folder(name, parentId)); }
 export async function renameItem(i, name) { find(i).name = name; }
 export async function trashItem(i) { const x = find(i); if (x) x.trashed = true; }
+export async function deleteForever(i) { const k = papers.findIndex((p) => p.id === i); if (k >= 0) papers.splice(k, 1); await sleep(80); return { permanent: true }; }
 export async function restoreItem(i) { const x = find(i); if (x) x.trashed = false; }
 export async function setStarred(i, s) { find(i).starred = s; }
 export async function moveItem(i, from, to) {

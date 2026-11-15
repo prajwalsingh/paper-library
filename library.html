@@ -68,11 +68,12 @@
     <main id="libMain">
       <header class="lib-head">
         <div id="crumbs" class="crumbs"></div>
+        <button id="btnEmptyTrash" class="btn danger-text" hidden title="Delete every paper in Trash for good">Empty Trash</button>
         <div class="lib-search">
           <svg><use href="#i-search"/></svg>
           <input id="search" type="search" placeholder="Search title, author, source, year…" autocomplete="off">
         </div>
-        <button id="btnRefresh" class="tb-btn" title="Reload from Drive"><svg><use href="#i-refresh"/></svg></button>
+        <button data-cloud id="btnRefresh" class="tb-btn" title="Reload from Drive"><svg><use href="#i-refresh"/></svg></button>
         <button id="btnImportFolder" class="btn" title="Upload a whole folder from your computer; its subfolders become collections">Import folder</button>
         <button id="btnAdd" class="btn primary"><svg><use href="#i-upload"/></svg>Add PDFs</button>
         <input id="fileInput" type="file" accept="application/pdf,.pdf" multiple hidden>
@@ -87,6 +88,7 @@
         <button class="btn" data-bulk="lookup">Look up details</button>
         <button class="btn" data-bulk="trash">Move to Trash</button>
         <button class="btn" data-bulk="restore">Restore</button>
+        <button class="btn danger-text" data-bulk="purge">Delete forever</button>
         <span class="grow"></span>
         <button class="tb-btn" data-bulk="clear" title="Clear selection"><svg><use href="#i-close"/></svg></button>
       </div>
@@ -140,7 +142,7 @@
           <div id="dColls" class="chips"></div>
           <div class="det-actions">
             <button id="dOpen" class="btn primary">Open &amp; highlight</button>
-            <button id="dDrive" class="btn">Show in Drive</button>
+            <button data-cloud id="dDrive" class="btn">Show in Drive</button>
             <button id="dExport" class="btn" title="Download this paper's highlights and notes as a Markdown file">Export highlights</button>
           </div>
         </div>
@@ -184,6 +186,14 @@
       <img src="icons/icon48.png" alt="" width="32" height="32">
       <h1>Paper Library</h1>
     </header>
+    <section id="cloudCard" class="card">
+      <h2>Where should your library live?</h2>
+      <div class="cloud-pick" role="radiogroup" aria-label="Cloud storage">
+        <button type="button" class="cloud-opt" data-provider="gdrive" role="radio"><b>Google Drive</b><span>Personal or Google Workspace account</span></button>
+        <button type="button" class="cloud-opt" data-provider="onedrive" role="radio"><b>OneDrive</b><span>Personal, work or school Microsoft account</span></button>
+      </div>
+      <p class="muted small">Each cloud keeps its own library, client ID and sign-in. You can switch any time in Settings; nothing is copied or deleted.</p>
+    </section>
     <section id="setupCard" class="card" hidden>
       <h2>One-time setup: connect to Google Drive</h2>
       <p>The extension needs its own Google “OAuth client” so it may read and update your Drive PDFs.
@@ -201,11 +211,33 @@
         <button id="saveClientId" class="btn primary">Save</button>
       </div>
     </section>
+    <section id="msSetupCard" class="card" hidden>
+      <h2>One-time setup: connect to OneDrive</h2>
+      <p>The extension needs its own Microsoft “app registration” so it may read and update your OneDrive PDFs.
+         It's free and takes about 5 minutes. Step-by-step guide with troubleshooting:
+         <a href="https://github.com/prajwalsingh/paper-library/blob/main/docs/SETUP-ONEDRIVE.md" target="_blank">docs/SETUP-ONEDRIVE.md</a>.</p>
+      <ol>
+        <li>Open <a href="https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank">Microsoft Entra → App registrations</a> and click <b>New registration</b>.</li>
+        <li>Name: <i>Paper Library</i>. Supported account types: <b>Accounts in any organizational directory and personal Microsoft accounts</b>.</li>
+        <li>Redirect URI: choose the platform <b>Single-page application (SPA)</b> and enter:
+          <div class="copy-row"><code id="msRedirectUri"></code><button class="btn" data-copy="msRedirectUri">Copy</button></div>
+        </li>
+        <li>Click <b>Register</b>, then copy the <b>Application (client) ID</b> from the Overview page and paste it here.
+            No client secret is needed; you approve OneDrive access when you sign in.</li>
+      </ol>
+      <div class="input-row">
+        <input id="msClientIdInput" type="text" placeholder="00000000-0000-0000-0000-000000000000">
+        <button id="saveMsClientId" class="btn primary">Save</button>
+      </div>
+    </section>
     <section id="signinCard" class="card" hidden>
       <h2>Sign in</h2>
-      <p>Sign in with the Google account whose Drive should hold your library. A folder called
+      <p id="signinText">Sign in with the Google account whose Drive should hold your library. A folder called
          <b>Paper Library</b> is created there on first use.</p>
-      <button id="signinBtn" class="btn primary">Sign in with Google</button>
+      <div class="det-actions">
+        <button id="signinBtn" class="btn primary">Sign in with Google</button>
+        <button id="changeClientId" class="btn">Use a different client ID</button>
+      </div>
       <p id="signinError" class="error"></p>
     </section>
   </div>

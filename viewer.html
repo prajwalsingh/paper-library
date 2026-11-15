@@ -85,7 +85,7 @@
 
       <div class="tb-group tb-right">
         <span id="docTitle" class="doc-title"></span>
-        <button id="saveStatus" class="save-status" title="Save to Drive now (Ctrl S)">
+        <button data-cloud id="saveStatus" class="save-status" title="Save to Drive now (Ctrl S)">
           <svg><use href="#i-cloud"/></svg><span id="saveText">Saved</span>
         </button>
         <button id="btnFind" class="tb-btn" title="Find (Ctrl F)"><svg><use href="#i-search"/></svg></button>
@@ -145,8 +145,8 @@
   </div>
 
   <div id="mainMenu" class="popover menu" hidden>
-    <button data-action="save"><svg><use href="#i-cloud"/></svg>Save to Drive now<kbd>Ctrl S</kbd></button>
-    <label class="menu-check"><input type="checkbox" id="optAutosave"> Autosave to Drive</label>
+    <button data-cloud data-action="save"><svg><use href="#i-cloud"/></svg>Save to Drive now<kbd>Ctrl S</kbd></button>
+    <label data-cloud class="menu-check"><input type="checkbox" id="optAutosave"> Autosave to Drive</label>
     <div class="menu-row">Theme
       <div class="seg" id="themeSeg" role="group" aria-label="Theme">
         <button data-theme-set="system" title="Follow the system setting">System</button>
@@ -156,12 +156,12 @@
     </div>
     <label class="menu-check" title="Inverts the page colours for reading in the dark"><input type="checkbox" id="optNight"> Night mode (dark pages)</label>
     <hr>
-    <button data-action="copy">Save a copy to Drive…</button>
+    <button data-cloud data-action="copy">Save a copy to Drive…</button>
     <button data-action="download">Download PDF with highlights</button>
     <button data-action="exportMd">Export highlights &amp; notes (Markdown)</button>
     <button data-action="copyMd">Copy highlights &amp; notes as Markdown</button>
-    <button data-action="drive">Open in Google Drive</button>
-    <button data-action="reload">Reload from Drive</button>
+    <button data-cloud data-action="drive">Open in Google Drive</button>
+    <button data-cloud data-action="reload">Reload from Drive</button>
     <hr>
     <button data-action="home">Paper Library</button>
     <button data-action="shortcuts">Keyboard shortcuts</button>

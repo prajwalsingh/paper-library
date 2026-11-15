@@ -16,6 +16,16 @@ python3 dev/serve.py
 - Library: <http://127.0.0.1:8765/library.html>
 - Viewer: <http://127.0.0.1:8765/viewer.html?src=/sample.pdf> (`/sample.pdf` is `docs/demo-paper.pdf`, or pass another PDF: `python3 dev/serve.py path/to.pdf`)
 
+Add `?p=onedrive` to either URL to see the OneDrive wording (the data is still the fake one;
+the OneDrive code itself needs a real Microsoft account, see `docs/SETUP-ONEDRIVE.md`).
+
+Automated tests for the OneDrive code (fake Microsoft Graph and fake sign-in, no account needed):
+
+```bash
+node dev/tests/onedrive.test.mjs
+node dev/tests/ms-auth.test.mjs
+```
+
 In demo mode, saves stay in memory (`window.__savedBytes` holds the last saved
 PDF). Online lookups of arXiv entries fail in a normal tab because arXiv doesn't
 allow cross-site requests. The installed extension is allowed to make them.
@@ -33,6 +43,9 @@ allow cross-site requests. The installed extension is allowed to make them.
 | `js/drive.js` | Drive REST calls: download, update content in place, metadata |
 | `js/library-drive.js` | Library ↔ Drive mapping: root folder, folder tree, properties (chunked), shortcuts, resumable upload |
 | `js/annotations.js` | Splits `/Highlight` annotations out of a PDF and writes them back (pdf-lib) |
+| `js/provider.js` | Picks the cloud (Google Drive or OneDrive); both offer the same `auth` / `files` / `library` functions |
+| `js/ms-auth.js` | Microsoft sign-in: authorization code + PKCE via `launchWebAuthFlow` |
+| `js/onedrive.js` | OneDrive via Microsoft Graph: files for the viewer + the library (index file `.paper-library.json`, hidden `.trash` folder) |
 | `js/export.js` | Highlights + notes → Markdown (shared by viewer and library; reads highlights with PDF.js in the library) |
 | `js/metadata.js` | Reads DOI/arXiv/title from page 1 and looks them up in Crossref/arXiv |
 | `lib/pdfjs/` | PDF.js 4.10.38 (`pdfjs-dist`): renderer, worker, viewer components, fonts, cMaps |

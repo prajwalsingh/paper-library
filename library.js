@@ -9,12 +9,18 @@
 // mock of Drive is loaded from ./dev/ instead.
 
 import * as pdfjsLib from './lib/pdfjs/pdf.min.mjs';
-import * as auth from './js/auth.js';
-import * as drive from './js/drive.js';
+import { getProviderId, setProviderId, loadProvider, relabel } from './js/provider.js';
 import { readHighlights, buildMarkdown, markdownFileName, downloadText } from './js/export.js';
 
 const IN_EXTENSION = typeof chrome !== 'undefined' && !!chrome.runtime?.id;
-const backend = IN_EXTENSION ? await import('./js/library-drive.js') : await import('./dev/mock-backend.js');
+// The cloud chosen in Settings (Google Drive or OneDrive, see js/provider.js).
+// Demo mode can preview the OneDrive wording with ?p=onedrive.
+const CLOUD = await loadProvider(IN_EXTENSION ? await getProviderId() : new URLSearchParams(location.search).get('p') || 'gdrive');
+const { auth, files: drive } = CLOUD;
+const ON_GDRIVE = CLOUD.id === 'gdrive';
+const backend = IN_EXTENSION ? CLOUD.library : await import('./dev/mock-backend.js');
+/** "Reload from Drive" → "Reload from OneDrive" when the library is in OneDrive. */
+const C = (s) => (CLOUD.id === 'gdrive' ? s : s.replace(/Google Drive/g, CLOUD.label).replace(/\bDrive\b/g, CLOUD.short));
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('./lib/pdfjs/pdf.worker.min.mjs', import.meta.url).href;
 const PDF_OPTS = {
@@ -176,18 +182,47 @@ function fail(e, what = 'That') {
 // ---------------------------------------------------------------------------
 // Boot: setup → sign-in → load
 // ---------------------------------------------------------------------------
+/**
+ * Unpacked extensions read their pages and scripts fresh from disk, but Chrome
+ * reads manifest.json (permissions and the network lock) only when you click
+ * ⟳ in chrome://extensions. After unzipping an update without ⟳, new code runs
+ * under the old manifest and new connections are refused. Spot that and say so.
+ */
+async function needsExtensionReload() {
+  try {
+    const onDisk = await (await fetch('manifest.json', { cache: 'no-store' })).json();
+    return onDisk.version !== chrome.runtime.getManifest().version;
+  } catch {
+    return false;
+  }
+}
+
 async function boot() {
+  if (IN_EXTENSION && (await needsExtensionReload())) {
+    const p = el('p', null, '');
+    p.innerHTML =
+      'The files on disk are a newer version than the one Chrome has loaded. To finish updating, open ' +
+      '<b>chrome://extensions</b> and click <b>⟳</b> (reload) on Paper Library, then open the library again.';
+    await dialog({ title: 'Finish updating Paper Library', body: p, actions: [{ label: 'OK', value: 'ok', primary: true }] });
+  }
   prefs = { ...prefs, ...(await store.get(Object.keys(prefs))) };
   ui.view = prefs.libView;
   ui.sort = prefs.libSort;
   ui.openFolders = new Set(prefs.libOpenFolders);
   wire();
+  relabel(document, CLOUD);
+  document.querySelectorAll('.cloud-opt').forEach((b) => {
+    const chosen = b.dataset.provider === CLOUD.id;
+    b.classList.toggle('chosen', chosen);
+    b.setAttribute('aria-checked', String(chosen));
+  });
   if (!IN_EXTENSION) {
-    $('userEmail').textContent = 'Demo mode (fake Drive)';
+    $('userEmail').textContent = C('Demo mode (fake Drive)');
     return loadLibrary();
   }
 
   $('redirectUri').textContent = auth.redirectUri();
+  $('msRedirectUri').textContent = auth.redirectUri();
   const clientId = await auth.getClientId();
   if (!clientId) return showSetup();
   try {
@@ -200,14 +235,35 @@ async function boot() {
 
 function showSetup() {
   showScreen('home');
-  $('setupCard').hidden = false;
+  $('setupCard').hidden = CLOUD.id !== 'gdrive';
+  $('msSetupCard').hidden = CLOUD.id !== 'onedrive';
   $('signinCard').hidden = true;
 }
 
 function showSignin() {
   showScreen('home');
   $('setupCard').hidden = true;
+  $('msSetupCard').hidden = true;
   $('signinCard').hidden = false;
+  if (CLOUD.id === 'onedrive') {
+    $('signinText').innerHTML =
+      'Sign in with the Microsoft account (personal, work or school) whose OneDrive should hold your library. ' +
+      'A folder called <b>Paper Library</b> is created there on first use.';
+    $('signinBtn').textContent = 'Sign in with Microsoft';
+  }
+}
+
+/** Switches the library to another cloud. Nothing is copied or deleted. */
+async function switchCloud(id) {
+  if (id === CLOUD.id) return;
+  if (!IN_EXTENSION) {
+    const u = new URL(location.href);
+    u.searchParams.set('p', id);
+    location.href = u.href;
+    return;
+  }
+  await setProviderId(id);
+  location.reload();
 }
 
 async function loadLibrary({ quiet = false } = {}) {
@@ -235,6 +291,7 @@ async function loadLibrary({ quiet = false } = {}) {
     if (e instanceof auth.AuthError) return showSignin();
     showScreen('home');
     $('setupCard').hidden = true;
+    $('msSetupCard').hidden = true;
     $('signinCard').hidden = false;
     $('signinError').textContent = 'Could not load the library: ' + e.message;
     console.error(e);
@@ -435,7 +492,7 @@ function rowFor(p, dupFirst) {
   const tdStar = el('td', 'c-star');
   const star = el('button', 'star-btn' + (p.starred ? ' on' : ''));
   star.dataset.star = '1';
-  star.title = p.starred ? 'Remove from Favorites' : 'Add to Favorites (stars the file in Drive)';
+  star.title = p.starred ? 'Remove from Favorites' : (ON_GDRIVE ? 'Add to Favorites (stars the file in Drive)' : 'Add to Favorites');
   star.append(icon(p.starred ? 'star-fill' : 'star'));
   tdStar.append(star);
 
@@ -483,6 +540,7 @@ function renderTable() {
     th.classList.toggle('desc', on && ui.sort.dir < 0);
   }
 
+  $('btnEmptyTrash').hidden = ui.view !== 'trash' || lib.trashed.size === 0;
   const empty = $('emptyState');
   empty.hidden = ui.visible.length > 0;
   if (!ui.visible.length) {
@@ -490,10 +548,10 @@ function renderTable() {
       all: 'Your library is empty. Click <b>Add PDFs</b>, drop PDFs here, or use <b>Import folder</b> to upload a folder of papers (its subfolders become collections).',
       added: 'Nothing added in the last 30 days.',
       read: 'Papers you open appear here.',
-      favorites: 'Click the ☆ next to a paper to add it here. (It stars the file in Drive too.)',
+      favorites: 'Click the ☆ next to a paper to add it here.' + (ON_GDRIVE ? ' (It stars the file in Drive too.)' : ''),
       unsorted: 'Every paper is in a collection.',
       duplicates: 'No duplicates found.',
-      trash: 'Trash is empty. (Drive deletes trashed files for good after 30 days.)',
+      trash: ON_GDRIVE ? 'Trash is empty. (Drive deletes trashed files for good after 30 days.)' : 'Trash is empty. (Trashed papers wait in the hidden “.trash” folder of your library until you restore them or delete them forever.)',
     };
     empty.innerHTML = ui.search
       ? 'No papers match your search.'
@@ -512,7 +570,7 @@ function renderBulk() {
   const inColl = ui.view.startsWith('coll:');
   for (const b of $('bulkBar').querySelectorAll('[data-bulk]')) {
     const k = b.dataset.bulk;
-    b.hidden = trash ? !['restore', 'clear'].includes(k) : k === 'restore' || (k === 'remove' && !inColl);
+    b.hidden = trash ? !['restore', 'purge', 'clear'].includes(k) : k === 'restore' || k === 'purge' || (k === 'remove' && !inColl);
   }
 }
 
@@ -545,7 +603,7 @@ function renderDetails() {
     if (!lib.folders.has(c)) continue;
     const isShortcut = p.shortcuts.some((s) => s.parentId === c);
     const chip = el('span', 'chip' + (isShortcut ? ' shortcut' : ''), folderPath(c).join(' / '));
-    chip.title = isShortcut ? 'Also listed here (Drive shortcut)' : 'The file lives in this Drive folder';
+    chip.title = isShortcut ? (ON_GDRIVE ? 'Also listed here (Drive shortcut)' : 'Also listed here') : C('The file lives in this Drive folder');
     chips.append(chip);
   }
   if (!lib.folders.has(p.parentId)) {
@@ -581,7 +639,7 @@ function currentFolderId() {
 }
 
 function openPaper(p) {
-  const url = `viewer.html?id=${encodeURIComponent(p.id)}`;
+  const url = `viewer.html?id=${encodeURIComponent(p.id)}${CLOUD.id === 'gdrive' ? '' : '&p=' + CLOUD.id}`;
   window.open(IN_EXTENSION ? url : `viewer.html?src=/sample.pdf&name=${encodeURIComponent(p.name)}`, '_blank');
   p.meta.lastRead = new Date().toISOString(); // the viewer also records this on Drive
   renderSoon();
@@ -638,7 +696,7 @@ async function addToCollection(ids, folderId) {
       fail(e, 'Adding ' + p.name);
     }
   }
-  if (n) toast(`Added ${n} paper${n > 1 ? 's' : ''} to ${lib.folders.get(folderId)?.name} (as Drive shortcuts)`);
+  if (n) toast(C(`Added ${n} paper${n > 1 ? 's' : ''} to ${lib.folders.get(folderId)?.name}${ON_GDRIVE ? ' (as Drive shortcuts)' : ''}`));
   renderSoon();
 }
 
@@ -698,6 +756,67 @@ async function restorePapers(ids) {
     } catch (e) {
       fail(e, 'Restoring ' + p.name);
     }
+  }
+  renderSoon();
+}
+
+/**
+ * Deletes papers in Trash for good (from the library folder AND the cloud's
+ * trash), after asking. Highlights live inside the PDFs, so they go too.
+ */
+async function deleteForever(ids) {
+  const list = ids.map((id) => lib.trashed.get(id)).filter(Boolean);
+  if (!list.length) return;
+  const n = list.length;
+  const what = n === 1 ? `“${displayTitle(list[0])}”` : `these ${n} papers`;
+  const r = await dialog({
+    title: n === 1 ? 'Delete this paper forever?' : `Delete ${n} papers forever?`,
+    body: el('p', null,
+      C(`This removes ${what} from Google Drive for good, including Drive’s trash. `) +
+      'Highlights and notes inside the PDF are deleted with it. This can’t be undone.'),
+    actions: [
+      { label: 'Cancel', value: 'cancel' },
+      { label: n === 1 ? 'Delete forever' : `Delete ${n} forever`, value: 'ok', danger: true },
+    ],
+  });
+  if (r !== 'ok') return;
+  let done = 0;
+  let toRecycleBin = 0;
+  let binUrl = '';
+  for (const p of list) {
+    try {
+      const res = await backend.deleteForever(p.id);
+      if (res && res.permanent === false) {
+        toRecycleBin++;
+        binUrl = res.recycleBinUrl || binUrl;
+      }
+      lib.trashed.delete(p.id);
+      ui.checked.delete(p.id);
+      if (ui.selectedId === p.id) ui.selectedId = null;
+      done++;
+    } catch (e) {
+      fail(e, 'Deleting ' + p.name);
+    }
+  }
+  renderSoon();
+  if (toRecycleBin) {
+    // OneDrive refused a true permanent delete: tell the user to finish it themselves.
+    const one = toRecycleBin === 1;
+    const choice = await dialog({
+      title: 'One more step: empty your OneDrive recycle bin',
+      body: el('p', null,
+        `${one ? 'The paper is' : `${toRecycleBin} papers are`} out of your library, but OneDrive doesn’t let apps skip its ` +
+        `recycle bin for this account, so ${one ? 'it is' : 'they are'} still in OneDrive’s recycle bin (and still use storage). ` +
+        'To delete for good, open the recycle bin, select the file' + (one ? '' : 's') + ' and click “Delete”. ' +
+        'Otherwise OneDrive removes them by itself after about 30 days.'),
+      actions: [
+        { label: 'Later', value: 'later' },
+        { label: 'Open OneDrive recycle bin', value: 'open', primary: true },
+      ],
+    });
+    if (choice === 'open') window.open(binUrl || 'https://onedrive.live.com/?v=recyclebin', '_blank');
+  } else if (done) {
+    toast(`Deleted ${done} paper${done === 1 ? '' : 's'} forever.`);
   }
   renderSoon();
 }
@@ -793,7 +912,7 @@ async function chooseCollectionMove(id) {
     preselect: f.parentId,
     exclude: new Set(subtree(id)),
     okLabel: 'Move',
-    note: 'The collection moves with all its papers and sub-collections (the Drive folder is moved).',
+    note: C('The collection moves with all its papers and sub-collections (the Drive folder is moved).'),
   });
   if (target) moveCollection(id, target);
 }
@@ -840,7 +959,7 @@ async function deleteCollection(id) {
   const r = await dialog({
     title: `Delete collection “${f.name}”?`,
     body:
-      `Its ${ids.size > 1 ? ids.size - 1 + ' sub-collections and ' : ''}folder${ids.size > 1 ? 's go' : ' goes'} to the Drive trash. ` +
+      C(`Its ${ids.size > 1 ? ids.size - 1 + ' sub-collections and ' : ''}folder${ids.size > 1 ? 's go' : ' goes'} to the ${ON_GDRIVE ? 'Drive trash' : 'OneDrive recycle bin'}. `) +
       `The ${inside.length} paper${inside.length === 1 ? '' : 's'} in it stay in your library (under Unsorted, or their other collections).`,
     actions: [{ label: 'Cancel', value: 'cancel' }, { label: 'Delete collection', value: 'ok', danger: true }],
   });
@@ -1273,7 +1392,7 @@ function wire() {
       renderTable();
     }, 120)
   );
-  $('btnRefresh').onclick = () => loadLibrary({ quiet: true }).then(() => toast('Library reloaded from Drive'));
+  $('btnRefresh').onclick = () => loadLibrary({ quiet: true }).then(() => toast(C('Library reloaded from Drive')));
   $('btnAdd').onclick = () => {
     uploadTargetFolder = null;
     $('fileInput').click();
@@ -1342,6 +1461,8 @@ function wire() {
     if (id && lib.papers.has(id) && !e.target.closest('[data-check],[data-star]')) openPaper(lib.papers.get(id));
   });
 
+  $('btnEmptyTrash').onclick = () => deleteForever([...lib.trashed.keys()]);
+
   // Bulk actions
   $('bulkBar').addEventListener('click', async (e) => {
     const k = e.target.closest('[data-bulk]')?.dataset.bulk;
@@ -1365,6 +1486,7 @@ function wire() {
     }
     if (k === 'trash') trashPapers(ids);
     if (k === 'restore') restorePapers(ids);
+    if (k === 'purge') deleteForever(ids);
   });
 
   // Details panel
@@ -1388,7 +1510,7 @@ function wire() {
       await backend.saveMeta(p.id, meta, 'manual');
       p.meta = { ...p.meta, ...meta, status: 'manual' };
       renderSoon();
-      toast('Details saved to Drive');
+      toast(C('Details saved to Drive'));
     } catch (e) {
       fail(e, 'Saving details');
     }
@@ -1464,9 +1586,9 @@ function wire() {
       e.preventDefault();
       ui.visible.forEach((p) => ui.checked.add(p.id));
       renderTable();
-    } else if (e.key === 'Delete' && ui.view !== 'trash') {
+    } else if (e.key === 'Delete') {
       const ids = ui.checked.size ? [...ui.checked] : ui.selectedId ? [ui.selectedId] : [];
-      if (ids.length) trashPapers(ids);
+      if (ids.length) ui.view === 'trash' ? deleteForever(ids) : trashPapers(ids);
     } else if (e.key === 'Enter' && lib.papers.has(ui.selectedId)) {
       openPaper(lib.papers.get(ui.selectedId));
     } else if (e.key === 'Escape') {
@@ -1501,11 +1623,26 @@ function wire() {
       toast('Copied');
     };
   });
+  document.querySelectorAll('.cloud-opt').forEach((b) => (b.onclick = () => switchCloud(b.dataset.provider)));
+  $('saveMsClientId').onclick = async () => {
+    const v = $('msClientIdInput').value.trim();
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)) {
+      return toast('That doesn’t look like an Application (client) ID (00000000-0000-0000-0000-000000000000).', 4000);
+    }
+    await auth.setClientId(v);
+    showSignin();
+  };
   $('saveClientId').onclick = async () => {
     const v = $('clientIdInput').value.trim();
     if (!/\.apps\.googleusercontent\.com$/.test(v)) return toast('That doesn’t look like an OAuth client ID (…apps.googleusercontent.com).', 4000);
     await auth.setClientId(v);
     showSignin();
+  };
+  $('changeClientId').onclick = async () => {
+    // Back to the setup card with the saved ID filled in, so it can be corrected.
+    $(ON_GDRIVE ? 'clientIdInput' : 'msClientIdInput').value = await auth.getClientId();
+    $('signinError').textContent = '';
+    showSetup();
   };
   $('signinBtn').onclick = async () => {
     $('signinError').textContent = '';
@@ -1513,7 +1650,9 @@ function wire() {
       await auth.getToken({ interactive: true });
       await loadLibrary();
     } catch (e) {
-      $('signinError').textContent = 'Sign-in failed: ' + e.message + ' — check the client ID and redirect URI in the setup steps.';
+      console.error('Sign-in failed', e);
+      $('signinError').textContent = 'Sign-in failed: ' + e.message +
+        (/Chrome could not reach/.test(e.message) ? '' : ' Check the client ID and redirect URI in the setup steps, or click “Use a different client ID”.');
     }
   };
 
@@ -1530,20 +1669,26 @@ async function showSettings() {
   auto.append(cb, document.createTextNode(' Open PDFs in the highlighter automatically when I open them on drive.google.com'));
   const failed = [...lib.papers.values()].filter((p) => p.meta.status === 'failed');
   body.append(auto);
-  const p = el('p', 'muted small', `Library folder in Drive: “${lib.root?.name || 'Paper Library'}”. Account: ${$('userEmail').textContent || '—'}.`);
+  const p = el('p', 'muted small', C(`Library folder in Drive: “${lib.root?.name || 'Paper Library'}”. Account: ${$('userEmail').textContent || '—'}.`));
   body.append(p);
+  const cloud = el('p', 'small', `Your library is stored in ${CLOUD.label}. `);
+  const other = CLOUD.id === 'gdrive' ? 'onedrive' : 'gdrive';
+  cloud.append(el('span', 'muted', 'Switching shows the other cloud’s library; nothing is copied or deleted, and each keeps its own client ID.'));
+  body.append(cloud);
   const actions = [
     { label: 'Close', value: 'close', primary: true },
-    { label: 'Open library folder in Drive', value: 'folder' },
+    { label: C('Open library folder in Drive'), value: 'folder' },
     ...(failed.length ? [{ label: `Retry details for ${failed.length} paper${failed.length > 1 ? 's' : ''}`, value: 'retry' }] : []),
-    { label: 'Change OAuth client ID', value: 'client' },
+    { label: `Switch to ${other === 'gdrive' ? 'Google Drive' : 'OneDrive'}`, value: 'switch' },
+    { label: CLOUD.id === 'gdrive' ? 'Change OAuth client ID' : 'Change app (client) ID', value: 'client' },
     { label: 'Sign out', value: 'signout' },
   ];
   const r = await dialog({ title: 'Settings', body, actions });
-  if (r === 'folder') window.open(`https://drive.google.com/drive/folders/${lib.root.id}`, '_blank');
+  if (r === 'folder') window.open(lib.root.webViewLink || `https://drive.google.com/drive/folders/${lib.root.id}`, '_blank');
+  if (r === 'switch') return switchCloud(other);
   if (r === 'retry') failed.forEach((x) => queueDetails(x));
   if (r === 'client') {
-    $('clientIdInput').value = await auth.getClientId();
+    $(CLOUD.id === 'gdrive' ? 'clientIdInput' : 'msClientIdInput').value = await auth.getClientId();
     showSetup();
   }
   if (r === 'signout') {

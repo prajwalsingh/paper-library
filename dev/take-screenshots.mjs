@@ -167,6 +167,18 @@ try {
   `);
   await sleep(200);
   await shot('setup.png');
+
+  // 7. The same screen with OneDrive chosen
+  await open(`${BASE}/library.html?p=onedrive`);
+  await evaluate(`
+    document.getElementById('lib').hidden = true;
+    document.getElementById('loading').hidden = true;
+    document.getElementById('home').hidden = false;
+    document.getElementById('msSetupCard').hidden = false;
+    document.getElementById('msRedirectUri').textContent = 'https://hadmfffnocpeglonjioajbpdfbkbjekf.chromiumapp.org/';
+  `);
+  await sleep(200);
+  await shot('setup-onedrive.png');
 } catch (e) {
   console.error('Screenshot step failed:', e.message);
   process.exitCode = 1;

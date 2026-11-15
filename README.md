@@ -5,18 +5,19 @@
 <h1 align="center">Paper Library</h1>
 
 <p align="center">
-  <b>Read, highlight and organise the research papers in your Google Drive,<br>
+  <b>Read, highlight and organise the research papers in your Google Drive or OneDrive,<br>
   with a desktop-style PDF viewer and a Mendeley-style library, right in Chrome.</b>
 </p>
 
 <p align="center">
-  Highlights are saved <i>into the PDF itself</i>, on the <i>same Drive file</i>.<br>
-  Collections are plain Drive folders. No server, no tracking, and your papers never leave your Drive.
+  Highlights are saved <i>into the PDF itself</i>, on the <i>same cloud file</i>.<br>
+  Collections are plain folders. No server, no tracking, and your papers never leave your own cloud.
 </p>
 
 <p align="center">
   <a href="#install">Install</a> ·
   <a href="docs/SETUP.md">Google setup</a> ·
+  <a href="docs/SETUP-ONEDRIVE.md">OneDrive setup</a> ·
   <a href="#no-data-sharing-and-how-to-check">Privacy &amp; proof</a> ·
   <a href="#how-it-works">How it works</a> ·
   <a href="docs/DEVELOPMENT.md">Development</a>
@@ -51,7 +52,7 @@
 - **Upload PDFs or a whole folder:** the folder becomes a collection, and its subfolders become sub-collections. You choose where it goes; **Top level** is preselected.
 - **Drag and drop:** drag papers onto a collection to move them. **Also add to…** lists a paper in a second collection as a Drive shortcut.
 - **Reorganise collections:** drag a collection onto another one, or onto the **COLLECTIONS** heading to make it top level. You can also use **⋯ → Move to…**. Its papers and sub-collections move with it.
-- **Quick views:** Recently Added, Recently Read, Favorites (Drive's ★), Unsorted, Duplicates, and Trash (Drive's trash).
+- **Quick views:** Recently Added, Recently Read, Favorites (Drive's ★), Unsorted, Duplicates, and Trash (Drive's trash). In Trash, **Restore** papers, or **Delete forever** / **Empty Trash** to remove them for good (after a confirmation).
 - **Search** across title, authors, source and year, and sort by any column.
 
 | Details panel | Dark mode, papers selected |
@@ -89,9 +90,14 @@ Either:
 
 It also works in other Chromium browsers that support extensions (Edge, Brave, Chromium).
 
-### 3. Connect it to Google Drive (one time)
+### 3. Connect it to your cloud (one time)
 
-Click the pinned icon. A setup page opens:
+Click the pinned icon. First choose where your library lives: **Google Drive** or **OneDrive**.
+You can switch later in **Settings**. Each cloud keeps its own library, and nothing is copied or deleted.
+
+#### Google Drive
+
+The setup page looks like this:
 
 ![First-run setup page with the redirect URI to copy and a field for the client ID](docs/screenshots/setup.png)
 
@@ -111,6 +117,17 @@ paste the client ID → **Sign in with Google**.
 > **Don't make it public** (in a repository, issue, screenshot or chat). It isn't a password, but
 > it identifies *your* Google project. Keeping it private means nobody else can build on your
 > project or use up its limits.
+
+#### OneDrive (personal, work or school)
+
+Same idea with Microsoft: you register your own free app in **Microsoft Entra**, so the OneDrive
+permission goes to *your own* app registration.
+👉 **Step-by-step guide: [docs/SETUP-ONEDRIVE.md](docs/SETUP-ONEDRIVE.md).**
+
+In short: Entra → **App registrations** → **New registration** → *any organizational directory and
+personal Microsoft accounts* → redirect URI of type **Single-page application** (the one shown on the
+setup page) → copy the **Application (client) ID** → paste it → **Sign in with Microsoft**.
+No client secret is needed.
 
 ### 4. Use it
 
@@ -136,7 +153,13 @@ The [releases page](https://github.com/prajwalsingh/paper-library/releases) list
   | Destination | Why |
   |---|---|
   | `www.googleapis.com`, `oauth2.googleapis.com` | Google Drive and Google sign-in |
+  | `graph.microsoft.com`, `login.microsoftonline.com` | OneDrive (Microsoft Graph) and Microsoft sign-in |
+  | `api.onedrive.com`, `*.1drv.com`, `*.sharepoint.com`, `*.microsoftpersonalcontent.com` | Microsoft's own storage servers, where OneDrive sends file downloads and uploads ¹ |
   | `api.crossref.org`, `export.arxiv.org` | Paper details, looked up by DOI / arXiv ID / title only (never the PDF) |
+
+  ¹ OneDrive hands out short-lived download/upload links on servers whose names vary per account
+  (e.g. `contoso-my.sharepoint.com`), so these are allowed by Microsoft domain (`*.`). They are
+  all Microsoft's domains; only your own OneDrive files are fetched from or sent there.
 
   Chrome blocks every other connection before it leaves your computer, including from the bundled libraries.
 
@@ -144,8 +167,8 @@ The [releases page](https://github.com/prajwalsingh/paper-library/releases) list
 
 | How | What you'll see |
 |---|---|
-| Open `manifest.json` → `content_security_policy` | The four allowed websites after `connect-src` |
-| Library page → right-click → **Inspect** → **Network** tab | Requests only to Google, Crossref and arXiv |
+| Open `manifest.json` → `content_security_policy` | The allowed websites after `connect-src` |
+| Library page → right-click → **Inspect** → **Network** tab | Requests only to your cloud (Google or Microsoft), Crossref and arXiv |
 | In that **Console**, run `fetch('https://example.com')` | *"Refused to connect because it violates the document's Content Security Policy"* |
 | `python3 scripts/audit.py` | Permissions, the lock, and every website and network call in the code |
 | `python3 scripts/audit.py --libs` | Proof that the bundled PDF.js and pdf-lib are byte-for-byte the official releases |
@@ -177,7 +200,16 @@ More detail: [docs/SECURITY.md](docs/SECURITY.md) · Privacy policy: [docs/PRIVA
 - **Automatic details.** The first page is scanned for a DOI or arXiv ID, which is looked up in Crossref or arXiv. For papers already in Drive, PDF.js downloads only the first part of the file.
 - **Sign-in.** This uses `chrome.identity.launchWebAuthFlow` with your own OAuth client. You can pick any Google account, and the short-lived token stays in your browser.
 
-Everything stays plain Drive files and folders. **If you uninstall Paper Library, your papers, folders and highlights are all still there.**
+**On OneDrive** the layout is the same (a *Paper Library* folder, collections are folders,
+highlights inside the PDFs). OneDrive has no hidden file properties, shortcuts or stars that apps
+can use, so paper details, favourites and "also in this collection" live in one small file,
+`Paper Library/.paper-library.json`, keyed by each file's OneDrive ID (which survives moves and
+renames). Papers you move to Trash wait in a hidden `.trash` folder inside the library until you restore them
+or delete them forever. If OneDrive doesn't let apps skip its own recycle bin for your account, Paper Library
+says so and offers to open the recycle bin, so you can empty it yourself.
+Sign-in uses Microsoft's *authorization code + PKCE* flow with your own app registration.
+
+Everything stays plain files and folders in your cloud. **If you uninstall Paper Library, your papers, folders and highlights are all still there.**
 
 ## Keyboard shortcuts
 
@@ -185,7 +217,7 @@ Everything stays plain Drive files and folders. **If you uninstall Paper Library
 |---|---|---|---|
 | `H` | highlighter tool | `/` | search |
 | `Ctrl S` | save now | `Enter` | open selected paper |
-| `Ctrl Z` / `Ctrl Shift Z` | undo / redo | `Delete` | move to Trash |
+| `Ctrl Z` / `Ctrl Shift Z` | undo / redo | `Delete` | move to Trash (in Trash: delete forever) |
 | `Delete` | delete selected highlight | `Ctrl A` | select all |
 | `Ctrl F` | find | `Shift`+click | select a range |
 | `Ctrl +` / `−` / `0`, `Ctrl`+wheel | zoom | `Esc` | clear selection |
@@ -220,7 +252,15 @@ organisation with **Internal** audience, or ask IT to allow your client ID. See 
 **Can several people share one client ID?**
 Yes, up to 100. Add their Google accounts as test users. Each person's files still stay in their own Drive. See [docs/SETUP.md](docs/SETUP.md#sharing-with-friends-or-lab-mates).
 
-**Does it work offline?** No. Files are read from and saved to Drive.
+**Can I use Google Drive and OneDrive at the same time?**
+One at a time. **Settings → Switch to …** changes which library you see; each cloud keeps its own
+library, client ID and sign-in, so switching back is instant. Papers are not copied between clouds.
+
+**"Need admin approval" when signing in with a university or work Microsoft account?**
+Your organisation only allows apps an admin has approved. Use a personal Microsoft account, or ask IT
+to approve your app registration. See [docs/SETUP-ONEDRIVE.md](docs/SETUP-ONEDRIVE.md#troubleshooting).
+
+**Does it work offline?** No. Files are read from and saved to your cloud.
 
 ## Development
 

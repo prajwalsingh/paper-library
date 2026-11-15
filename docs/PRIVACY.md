@@ -19,7 +19,8 @@ It is distributed only at <https://github.com/prajwalsingh/paper-library>.
 
 ## Third parties
 
-- **Google** (accounts.google.com, googleapis.com): sign-in and the Google Drive API, under [Google's privacy policy](https://policies.google.com/privacy).
+- **Google** (accounts.google.com, googleapis.com): sign-in and the Google Drive API, under [Google's privacy policy](https://policies.google.com/privacy). Only if you use Google Drive.
+- **Microsoft** (login.microsoftonline.com, graph.microsoft.com and Microsoft's OneDrive storage servers): sign-in and the OneDrive API, under the [Microsoft Privacy Statement](https://privacy.microsoft.com/privacystatement). Only if you use OneDrive.
 - **Crossref** (api.crossref.org) and **arXiv** (export.arxiv.org): public bibliographic databases used to fill in paper details. They receive **only** a DOI, an arXiv identifier, or a paper title, with no account information, and **never** the PDF or its text.
 
 Nothing is sold, shared, or used for advertising.

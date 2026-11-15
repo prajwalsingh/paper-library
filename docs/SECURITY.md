@@ -29,6 +29,9 @@ extension page. It lists the **only** places the extension can send or receive d
 | `https://oauth2.googleapis.com` | Google sign-in (signing out / revoking access) |
 | `https://api.crossref.org` | Looking up a paper's title and authors by **DOI or title only** |
 | `https://export.arxiv.org` | Looking up a paper's details by **arXiv ID only** |
+| `https://graph.microsoft.com` | OneDrive (Microsoft Graph API): reading and saving *your* files (only if you choose OneDrive) |
+| `https://login.microsoftonline.com` | Microsoft sign-in (exchanging the sign-in code for a token) |
+| `https://api.onedrive.com`, `https://*.1drv.com`, `https://*.sharepoint.com`, `https://*.microsoftpersonalcontent.com` | Microsoft's storage servers. OneDrive gives every download and large upload a short-lived link on one of these; the server name varies per account and region, so the whole Microsoft domain is allowed. Only your own OneDrive files go there. |
 
 Chrome refuses any other connection (data requests, images, frames, form posts)
 before it leaves your computer. This also applies to the bundled third-party
@@ -46,7 +49,7 @@ After `connect-src`, the only websites listed are the four above.
 ### b) Watch the traffic live (2 minutes)
 1. Open the Paper Library page, right-click → **Inspect** → **Network** tab.
 2. Use the extension: open papers, highlight, save.
-3. Every request goes to `googleapis.com`, `crossref.org` or `arxiv.org`, and nothing else.
+3. Every request goes to `googleapis.com` (or, with OneDrive, `graph.microsoft.com`, `login.microsoftonline.com` and Microsoft's storage servers), `crossref.org` or `arxiv.org`, and nothing else.
 
 To see the lock in action, type this into the **Console** tab:
 ```js

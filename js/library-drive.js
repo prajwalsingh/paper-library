@@ -270,6 +270,20 @@ export async function deleteShortcut(id) {
   await authedFetch(`${API}/files/${id}?supportsAllDrives=true`, { method: 'DELETE' });
 }
 
+/**
+ * Deletes a paper for good: skips Drive's trash, so it can't be restored. Its
+ * shortcuts in other collections are removed too, so none are left pointing at nothing.
+ */
+export async function deleteForever(id) {
+  try {
+    for (const sc of await listAll(`shortcutDetails.targetId=${quote(id)}`, 'id')) {
+      await authedFetch(`${API}/files/${sc.id}?supportsAllDrives=true`, { method: 'DELETE' }).catch(() => {});
+    }
+  } catch {} // shortcuts are tidy-up only
+  await authedFetch(`${API}/files/${encodeURIComponent(id)}?supportsAllDrives=true`, { method: 'DELETE' });
+  return { permanent: true };
+}
+
 // ---------------------------------------------------------------------------
 // Paper details
 // ---------------------------------------------------------------------------
@@ -339,4 +353,9 @@ export async function pdfSource(id) {
     disableAutoFetch: true,
     disableStream: true,
   };
+}
+
+/** Paper details for the viewer's Markdown export (Drive keeps them on the file itself). */
+export async function paperDetails(meta) {
+  return decodeMeta(meta.properties);
 }
