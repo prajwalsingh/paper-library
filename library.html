@@ -122,6 +122,11 @@
         <button id="detClose" class="tb-btn" title="Close"><svg><use href="#i-close"/></svg></button>
       </div>
       <div class="det-body">
+        <div class="det-colls">
+          <div class="small muted">In collections</div>
+          <div id="dColls" class="chips"></div>
+          <div id="dCollsHint" class="small muted" hidden></div>
+        </div>
         <label>Title<textarea id="dTitle" rows="3"></textarea></label>
         <label>Authors <span class="hint">one per line, “Last, First”</span><textarea id="dAuthors" rows="4"></textarea></label>
         <div class="det-row">
@@ -139,7 +144,6 @@
         <div class="det-file">
           <div class="small muted">File</div>
           <div id="dFile" class="fname"></div>
-          <div id="dColls" class="chips"></div>
           <div class="det-actions">
             <button id="dOpen" class="btn primary">Open &amp; highlight</button>
             <button data-cloud id="dDrive" class="btn">Show in Drive</button>

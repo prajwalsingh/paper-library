@@ -23,6 +23,16 @@
   <a href="docs/DEVELOPMENT.md">Development</a>
 </p>
 
+> [!TIP]
+> **🆕 Latest version: [v2.1.0](docs/releases/v2.1.0.md), updated 15 November 2026.**
+> Click a paper and the details panel now shows **which collections it is in**, and the sidebar highlights them.
+> [v2.0.0](docs/releases/v2.0.0.md) added **OneDrive**, **Delete forever / Empty Trash** and Markdown export.
+>
+> **Installed an older copy?** Check your version in `chrome://extensions`, then update: run `git pull` in your
+> Paper Library folder (or download the [latest release](https://github.com/prajwalsingh/paper-library/releases/latest)
+> over it) and click **⟳** on the *Paper Library* card. Your library, highlights and client IDs stay as they are.
+> [How to update](#updating) · [All release notes](docs/releases/)
+
 > [!IMPORTANT]
 > **The only official source is this repository: <https://github.com/prajwalsingh/paper-library>.**
 > Paper Library is **not** published on the Chrome Web Store or anywhere else. Any copy offered
@@ -53,6 +63,7 @@
 - **Drag and drop:** drag papers onto a collection to move them. **Also add to…** lists a paper in a second collection as a Drive shortcut.
 - **Reorganise collections:** drag a collection onto another one, or onto the **COLLECTIONS** heading to make it top level. You can also use **⋯ → Move to…**. Its papers and sub-collections move with it.
 - **Quick views:** Recently Added, Recently Read, Favorites (Drive's ★), Unsorted, Duplicates, and Trash (Drive's trash). In Trash, **Restore** papers, or **Delete forever** / **Empty Trash** to remove them for good (after a confirmation).
+- **See where a paper lives:** click any paper (in All References, a search, anywhere) and the details panel lists its collections. The same collections light up in the sidebar; click one to jump there.
 - **Search** across title, authors, source and year, and sort by any column.
 
 | Details panel | Dark mode, papers selected |

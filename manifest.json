@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Paper Library",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Read, highlight and organise research papers in your Google Drive or OneDrive. Highlights are saved straight back into the PDF.",
   "homepage_url": "https://github.com/prajwalsingh/paper-library",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqGcJnEXdJopgXoUMMS5wIdd+7jwLYahpIJSTyLatM9wasnu2LGi6oiNU2bvWqRmVSxfaeydvcWRDPq7JDmYhGJnVjYhoCU6bH9whhY036wM1YyGviKN0b7MBVGPM53jjxYesVO31cHl5CXOyO2P+wxfk31H524axVgyRVbd2uRZ9DovbTq8dE1xcX9AWlOyDmufo1Kd1UbVadMw+BVyTomKb8dJVJ798LLLa3CzTsaGhb41OQwM23IdZyPBibVxP//H14QE4wsoD8nQuKbEDbgCHR9D+7iCiCfUoElntz9OOSfqQ24vqZlDKpR8EKWd7I38H+w4zbPFurCxDsIZZHwIDAQAB",

@@ -442,6 +442,7 @@ function renderTree() {
   };
   const tree = $('tree');
   tree.replaceChildren(...build(lib.root.id).children);
+  markSelectedCollections();
 }
 
 function renderCrumbs() {
@@ -578,7 +579,7 @@ function renderDetails() {
   const p = lib.papers.get(ui.selectedId) || lib.trashed.get(ui.selectedId);
   $('details').hidden = !p;
   $('lib').classList.toggle('details-open', !!p);
-  if (!p) return;
+  if (!p) return markSelectedCollections();
   const m = p.meta;
   // Don't overwrite what the user is typing.
   if (!$('details').contains(document.activeElement) || $('details').dataset.id !== p.id) {
@@ -597,22 +598,64 @@ function renderDetails() {
   };
   $('dStatus').textContent = working.has(p.id) ? 'Reading details…' : statusText[m.status] || 'Details not read yet.';
   $('dFile').textContent = p.name;
-  const chips = $('dColls');
-  chips.replaceChildren();
-  for (const c of p.collections) {
-    if (!lib.folders.has(c)) continue;
-    const isShortcut = p.shortcuts.some((s) => s.parentId === c);
-    const chip = el('span', 'chip' + (isShortcut ? ' shortcut' : ''), folderPath(c).join(' / '));
-    chip.title = isShortcut ? (ON_GDRIVE ? 'Also listed here (Drive shortcut)' : 'Also listed here') : C('The file lives in this Drive folder');
-    chips.append(chip);
-  }
-  if (!lib.folders.has(p.parentId)) {
-    const chip = el('span', 'chip', 'Unsorted');
-    chip.title = 'The file lives in the library root folder';
-    chips.prepend(chip);
-  }
+  renderPaperCollections(p);
   const isTrash = lib.trashed.has(p.id);
   for (const id of ['dSave', 'dLookup', 'dOpen']) $(id).disabled = isTrash;
+}
+
+// The collections a paper belongs to: chips in the details panel (click one to
+// open that collection) and a highlight on the same collections in the sidebar.
+function paperCollections(p) {
+  return p.collections.filter((c) => lib.folders.has(c)).map((c) => ({ id: c, shortcut: p.shortcuts.some((s) => s.parentId === c) }));
+}
+
+function renderPaperCollections(p) {
+  const chips = $('dColls');
+  chips.replaceChildren();
+  let anyShortcut = false;
+  if (lib.trashed.has(p.id)) {
+    const chip = el('span', 'chip muted-chip');
+    chip.append(icon('trash'), document.createTextNode('In Trash'));
+    chips.append(chip);
+  } else {
+    // The folder the file lives in first, then the ones it is only listed in.
+    for (const c of paperCollections(p).sort((a, b) => a.shortcut - b.shortcut)) {
+      const chip = el('button', 'chip' + (c.shortcut ? ' shortcut' : ''));
+      chip.type = 'button';
+      chip.dataset.goto = 'coll:' + c.id;
+      chip.append(icon('folder'), document.createTextNode(folderPath(c.id).join(' / ')));
+      chip.title = (c.shortcut ? (ON_GDRIVE ? 'Also listed here (Drive shortcut)' : 'Also listed here') : C('The file lives in this Drive folder')) + '. Click to open this collection.';
+      chips.append(chip);
+      anyShortcut ||= c.shortcut;
+    }
+    if (!inLibraryFolder(p)) {
+      const chip = el('button', 'chip muted-chip');
+      chip.type = 'button';
+      chip.dataset.goto = 'unsorted';
+      chip.append(icon('inbox'), document.createTextNode('Unsorted: not in any collection'));
+      chip.title = 'The file lives in the library root folder. Drag it onto a collection to sort it.';
+      chips.append(chip);
+    }
+  }
+  $('dCollsHint').hidden = !anyShortcut;
+  $('dCollsHint').textContent = lib.folders.has(p.parentId)
+    ? 'Outlined: also listed there. The file itself is in the filled one.'
+    : C('Outlined: listed there. The file itself is in the main Paper Library folder on Drive.');
+  markSelectedCollections();
+}
+
+function markSelectedCollections() {
+  const p = lib.papers.get(ui.selectedId);
+  const mine = new Set(p ? paperCollections(p).map((c) => c.id) : []);
+  // A collapsed parent gets a lighter mark, so you can see where to look.
+  const inside = new Set();
+  for (const c of mine) for (let f = lib.folders.get(lib.folders.get(c).parentId); f; f = lib.folders.get(f.parentId)) inside.add(f.id);
+  for (const node of $('tree').querySelectorAll('.node')) {
+    const id = node.dataset.folder;
+    node.classList.toggle('in-sel', mine.has(id));
+    node.classList.toggle('sel-inside', !mine.has(id) && inside.has(id) && !ui.openFolders.has(id));
+  }
+  for (const li of $('navList').children) li.classList.toggle('in-sel', !!p && li.dataset.view === 'unsorted' && !inLibraryFolder(p));
 }
 
 // ---------------------------------------------------------------------------
@@ -1354,6 +1397,7 @@ function wire() {
       ui.openFolders.has(id) ? ui.openFolders.delete(id) : ui.openFolders.add(id);
       saveOpenFolders();
       twist.closest('li').classList.toggle('open');
+      markSelectedCollections();
     } else if (more) {
       e.stopPropagation();
       collMenuFor = more.dataset.more;
@@ -1490,6 +1534,12 @@ function wire() {
   });
 
   // Details panel
+  $('dColls').onclick = (e) => {
+    const chip = e.target.closest('[data-goto]');
+    if (!chip) return;
+    setView(chip.dataset.goto); // the paper stays selected
+    $('rows').querySelector(`tr[data-id="${CSS.escape(ui.selectedId)}"]`)?.scrollIntoView({ block: 'nearest' });
+  };
   $('detClose').onclick = () => {
     ui.selectedId = null;
     renderTable();
