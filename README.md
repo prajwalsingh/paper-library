@@ -32,9 +32,8 @@
 > read them **side by side** with it. [v2.1.0](docs/releases/v2.1.0.md) shows which collections a paper is in;
 > [v2.0.0](docs/releases/v2.0.0.md) added **OneDrive** and **Delete forever**.
 >
-> **Installed an older copy?** Check your version in `chrome://extensions`, then update: run `git pull` in your
-> Paper Library folder (or download the [latest release](https://github.com/prajwalsingh/paper-library/releases/latest)
-> over it) and click **⟳** on the *Paper Library* card. Your library, highlights and client IDs stay as they are.
+> **Installed an older copy?** Check your version in `chrome://extensions`, then run `git pull` in your
+> Paper Library folder and click **⟳** on the *Paper Library* card. Your library, highlights and client IDs stay as they are.
 > [How to update](#updating) · [All release notes](docs/releases/)
 
 > [!IMPORTANT]
@@ -60,7 +59,7 @@
 
 ## Install (short version)
 
-1. **Download** the [latest release](https://github.com/prajwalsingh/paper-library/releases/latest) zip and unzip it somewhere permanent, **or** clone:
+1. **Clone** it with [git](https://git-scm.com/downloads) into a folder you'll keep. Git keeps it in sync later (see Updating):
    ```bash
    git clone https://github.com/prajwalsingh/paper-library.git
    ```
@@ -74,8 +73,8 @@ The [website's install guide](https://prajwalsingh.github.io/paper-library/#inst
 
 ### Updating
 
-Updates never install themselves. Run `git pull` in your Paper Library folder (or unzip the new release
-over it), then click **⟳ reload** on the *Paper Library* card in `chrome://extensions`.
+Updates never install themselves. Run `git pull` in your Paper Library folder, then click **⟳ reload**
+on the *Paper Library* card in `chrome://extensions`. Git updates the folder Chrome already uses, so nothing is replaced by hand.
 Your library, highlights and client IDs stay as they are. What changed: [release notes](docs/releases/).
 
 ## Check the privacy yourself

@@ -64,14 +64,13 @@ python3 scripts/audit.py          # permissions, the lock, every website and net
 python3 scripts/audit.py --libs   # proves the bundled PDF.js and pdf-lib are byte-for-byte the official npm releases
 ```
 
-### d) Check your download
-Each release has a `.zip.sha256` file next to the zip. Compare:
+### d) Check your copy
+Paper Library is installed and updated with git, so git can prove your folder matches the published code:
 ```bash
-sha256sum -c paper-library-vX.Y.Z.zip.sha256      # Linux
-shasum -a 256 paper-library-vX.Y.Z.zip            # macOS: compare with the file's contents
-Get-FileHash paper-library-vX.Y.Z.zip             # Windows PowerShell
+git remote -v      # must show https://github.com/prajwalsingh/paper-library.git
+git fetch && git status
 ```
-`OK` (or matching hashes) means your zip is exactly the published release.
+*"Your branch is up to date … nothing to commit, working tree clean"* means every file is exactly what is on GitHub.
 
 ### e) Review your Google permissions anytime
 <https://myaccount.google.com/permissions> lists the access you granted to your

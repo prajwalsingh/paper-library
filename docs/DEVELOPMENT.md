@@ -76,11 +76,14 @@ paper, edit and run `node dev/make-demo-pdf.mjs`.
 
 1. Bump `"version"` in `manifest.json`.
 2. Run `python3 scripts/audit.py --libs` and check that it reports no unexpected hosts and identical libraries.
-3. `./scripts/package.sh` builds `dist/paper-library-v<version>.zip`, which contains only the files the extension needs, plus `…zip.sha256`.
-4. Write `docs/releases/v<version>.md`, update the **Latest version** banner at the top of `README.md`,
+3. Write `docs/releases/v<version>.md`, update the **Latest version** banner at the top of `README.md`,
    and add the version at the top of `RELEASES` in `docs/index.html` (the website's version pill and
    release history are built from that list).
-5. Create a GitHub release with tag `v<version>`, attach **both** files, and list the changes.
+4. Commit and push. Users install with `git clone` and update with `git pull` + ⟳, so pushing *is* the release.
+   Optionally tag it (`git tag v<version> && git push --tags`) so each version can be checked out later.
+
+`./scripts/package.sh` still builds `dist/paper-library-v<version>.zip` (only the files the extension
+needs, plus a SHA-256) for your own archive. It is not offered for download.
 
 Distribution is GitHub only (see [SECURITY.md](SECURITY.md)). Don't publish builds anywhere else.
 

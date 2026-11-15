@@ -287,8 +287,7 @@ dialog#lightbox p { color: #ddd; text-align: center; margin: 10px 0 0; font-size
         <h1>Read, highlight and organise papers <span class="mark">in your own cloud</span></h1>
         <p class="lead">A Chrome extension with a desktop-style PDF reader and a Mendeley-style library for the research papers in your <b>Google Drive</b> or <b>OneDrive</b>. Highlights are saved <i>inside the PDF</i>, on the same file.</p>
         <div class="cta">
-          <a class="btn primary" id="dlBtn" href="https://github.com/prajwalsingh/paper-library/releases/latest"><svg><use href="#i-down"/></svg>Download latest</a>
-          <a class="btn" href="#install">Install guide</a>
+          <a class="btn primary" id="dlBtn" href="#install"><svg><use href="#i-down"/></svg>Install with git</a>
           <a class="btn" href="https://github.com/prajwalsingh/paper-library"><svg><use href="#i-gh"/></svg>GitHub</a>
         </div>
         <div class="trust">
@@ -377,18 +376,10 @@ dialog#lightbox p { color: #ddd; text-align: center; margin: 10px 0 0; font-size
       <div class="steps">
         <div class="step reveal">
           <div>
-            <h3>Download</h3>
-            <div class="two">
-              <div>
-                <p><b>Option A: the release zip.</b> Download <code>paper-library-vX.Y.Z.zip</code> from the <a href="https://github.com/prajwalsingh/paper-library/releases/latest">latest release</a>, optionally check it, and unzip it somewhere permanent (e.g. <code>~/Apps/paper-library</code>).</p>
-                <div class="copy-row"><code>sha256sum -c paper-library-vX.Y.Z.zip.sha256</code><button class="copy-btn">Copy</button></div>
-              </div>
-              <div>
-                <p><b>Option B: clone with git.</b> Easiest to update later with <code>git pull</code>.</p>
-                <div class="copy-row"><code>git clone https://github.com/prajwalsingh/paper-library.git</code><button class="copy-btn">Copy</button></div>
-              </div>
-            </div>
-            <p class="muted">Keep the folder after installing: Chrome runs an unpacked extension straight from it.</p>
+            <h3>Get the code with git</h3>
+            <p>Clone the repository into a folder you'll keep (for example <code>~/Apps</code>). Git is what keeps your copy in sync later: one <code>git pull</code> and you have the newest version, in the very folder Chrome already uses. No downloading and replacing files by hand.</p>
+            <div class="copy-row"><code>git clone https://github.com/prajwalsingh/paper-library.git</code><button class="copy-btn">Copy</button></div>
+            <p class="muted">No git yet? Install it from <a href="https://git-scm.com/downloads">git-scm.com</a> (on Linux: your package manager, e.g. <code>sudo apt install git</code>). Keep the folder after installing: Chrome runs an unpacked extension straight from it.</p>
           </div>
         </div>
 
@@ -454,7 +445,7 @@ dialog#lightbox p { color: #ddd; text-align: center; margin: 10px 0 0; font-size
             <h3>Updating</h3>
             <p>Updates never install themselves, so you decide when. Check your version in <code>chrome://extensions</code>; if it's older than <b class="latest-v">the latest</b>:</p>
             <ol>
-              <li>Get the new code into the <b>same folder</b>: run <code>git pull</code> there, or unzip the new release over it.</li>
+              <li>In your Paper Library folder, get the new code:<div class="copy-row"><code>git pull</code><button class="copy-btn">Copy</button></div></li>
               <li>Click <b>⟳ reload</b> on the <i>Paper Library</i> card in <code>chrome://extensions</code> (Chrome only re-reads <code>manifest.json</code> then), and reopen Paper Library tabs.</li>
             </ol>
             <p class="muted">Your library, highlights and client IDs stay exactly as they are.</p>
@@ -512,7 +503,7 @@ dialog#lightbox p { color: #ddd; text-align: center; margin: 10px 0 0; font-size
             <tr><td>In that <b>Console</b>, run <code>fetch('https://example.com')</code></td><td><i>"Refused to connect because it violates the document's Content Security Policy"</i></td></tr>
             <tr><td><code>python3 scripts/audit.py</code></td><td>Permissions, the lock, and every website and network call in the code</td></tr>
             <tr><td><code>python3 scripts/audit.py --libs</code></td><td>The bundled PDF.js and pdf-lib are byte-for-byte the official releases</td></tr>
-            <tr><td><code>sha256sum -c paper-library-vX.Y.Z.zip.sha256</code></td><td>Your download is exactly the published release</td></tr>
+            <tr><td><code>git fetch &amp;&amp; git status</code></td><td><i>"up to date … nothing to commit"</i>: your copy is exactly the published code</td></tr>
           </tbody>
         </table>
       </div>
@@ -661,7 +652,7 @@ dialog#lightbox p { color: #ddd; text-align: center; margin: 10px 0 0; font-size
         <p>Installed a while ago? Compare with the version in <code>chrome://extensions</code>, then <a href="#updating">update</a>.</p>
       </div>
       <div class="timeline" id="timeline"></div>
-      <p style="margin-top:18px"><a href="https://github.com/prajwalsingh/paper-library/releases">All releases on GitHub →</a></p>
+      <p style="margin-top:18px"><a href="https://github.com/prajwalsingh/paper-library/tree/main/docs/releases">All release notes on GitHub →</a></p>
     </div>
   </section>
 </main>
