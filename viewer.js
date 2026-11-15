@@ -19,6 +19,8 @@ import {
 import * as auth from './js/auth.js';
 import * as drive from './js/drive.js';
 import { splitHighlights, applyHighlights, newId } from './js/annotations.js';
+import { textInRects, buildMarkdown, markdownFileName, downloadText } from './js/export.js';
+import { decodeMeta } from './js/library-drive.js';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('./lib/pdfjs/pdf.worker.min.mjs', import.meta.url).href;
 
@@ -596,40 +598,6 @@ function pageTextItems(pageIndex) {
   return textCache.get(pageIndex);
 }
 
-function textInRects(items, rects) {
-  const lines = [];
-  for (const [x1, y1, x2, y2] of rects) {
-    const parts = [];
-    for (const it of items) {
-      const [, b, c, d, e, f] = it.transform;
-      if (Math.abs(b) > 1e-3 || Math.abs(c) > 1e-3 || it.width <= 0) continue;
-      const h = it.height || Math.abs(d);
-      const overlap = Math.min(y2, f + 0.85 * h) - Math.max(y1, f - 0.25 * h);
-      if (overlap < 0.4 * Math.min(h, y2 - y1)) continue;
-      const ox1 = Math.max(x1, e);
-      const ox2 = Math.min(x2, e + it.width);
-      const n = it.str.length;
-      if (ox2 - ox1 < 0.4 * (it.width / n)) continue;
-      const s = Math.max(0, Math.round(((ox1 - e) / it.width) * n));
-      const t = Math.min(n, Math.round(((ox2 - e) / it.width) * n));
-      if (t > s) parts.push({ x: ox1, s: it.str.slice(s, t) });
-    }
-    parts.sort((p, q) => p.x - q.x);
-    lines.push(parts.map((p) => p.s).join('').trim());
-  }
-  return joinLines(lines);
-}
-
-function joinLines(lines) {
-  let out = '';
-  for (const line of lines) {
-    if (!line) continue;
-    if (/[A-Za-z]-$/.test(out)) out = out.slice(0, -1) + line;
-    else out += (out ? ' ' : '') + line;
-  }
-  return out.replace(/\s+/g, ' ').trim();
-}
-
 async function fillHighlightTexts(list) {
   const todo = list.filter((h) => !h.text);
   if (!todo.length) return;
@@ -929,6 +897,23 @@ async function downloadPdf() {
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
   } catch (e) {
     toast('Download failed: ' + e.message);
+  }
+}
+
+/** Highlights + notes as Markdown: downloaded as a .md file, or copied. */
+async function exportHighlights(how) {
+  try {
+    await fillHighlightTexts(state.highlights); // texts are found lazily; make sure all are there
+    const paper = { ...decodeMeta(state.meta?.properties), fileName: state.meta?.name };
+    const md = buildMarkdown(paper, state.highlights);
+    if (how === 'copy') {
+      await navigator.clipboard.writeText(md);
+      toast(`Copied ${state.highlights.length} highlight${state.highlights.length === 1 ? '' : 's'} as Markdown.`);
+    } else {
+      downloadText(markdownFileName(paper), md);
+    }
+  } catch (e) {
+    toast('Export failed: ' + e.message);
   }
 }
 
@@ -1292,6 +1277,8 @@ function wireStaticUi() {
       save: () => save({ manual: true }),
       copy: saveCopy,
       download: downloadPdf,
+      exportMd: () => exportHighlights('download'),
+      copyMd: () => exportHighlights('copy'),
       drive: () => window.open(state.meta?.webViewLink || `https://drive.google.com/file/d/${state.fileId}/view`, '_blank'),
       reload: () => location.reload(),
       home: () => (location.href = 'library.html'),

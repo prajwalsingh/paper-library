@@ -11,6 +11,7 @@
 import * as pdfjsLib from './lib/pdfjs/pdf.min.mjs';
 import * as auth from './js/auth.js';
 import * as drive from './js/drive.js';
+import { readHighlights, buildMarkdown, markdownFileName, downloadText } from './js/export.js';
 
 const IN_EXTENSION = typeof chrome !== 'undefined' && !!chrome.runtime?.id;
 const backend = IN_EXTENSION ? await import('./js/library-drive.js') : await import('./dev/mock-backend.js');
@@ -1419,6 +1420,27 @@ function wire() {
   $('dDrive').onclick = () => {
     const p = lib.papers.get(ui.selectedId) || lib.trashed.get(ui.selectedId);
     if (p) window.open(p.webViewLink || `https://drive.google.com/file/d/${p.id}/view`, '_blank');
+  };
+
+  $('dExport').onclick = async () => {
+    const p = lib.papers.get(ui.selectedId) || lib.trashed.get(ui.selectedId);
+    if (!p) return;
+    $('dExport').disabled = true;
+    toast('Reading highlights…', 10_000);
+    let doc;
+    try {
+      // Same partial loading as for details: PDF.js fetches only the parts it needs.
+      doc = await pdfjsLib.getDocument({ ...PDF_OPTS, ...(await backend.pdfSource(p.id)) }).promise;
+      const highlights = await readHighlights(doc);
+      const paper = { ...p.meta, fileName: p.name };
+      downloadText(markdownFileName(paper), buildMarkdown(paper, highlights));
+      toast(highlights.length ? `Exported ${highlights.length} highlight${highlights.length === 1 ? '' : 's'}.` : 'This paper has no highlights yet; exported its details only.');
+    } catch (e) {
+      fail(e, 'Export');
+    } finally {
+      doc?.destroy();
+      $('dExport').disabled = false;
+    }
   };
 
   // Tasks panel

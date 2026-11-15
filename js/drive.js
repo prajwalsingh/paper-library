@@ -12,7 +12,7 @@ export const UPLOAD = 'https://www.googleapis.com/upload/drive/v3';
 const META_FIELDS =
   'id,name,mimeType,headRevisionId,modifiedTime,size,parents,webViewLink,' +
   'capabilities(canEdit,canDownload),shortcutDetails(targetId,targetMimeType),' +
-  'lastModifyingUser(displayName,emailAddress)';
+  'lastModifyingUser(displayName,emailAddress),properties';
 
 export class DriveError extends Error {
   constructor(message, status) {

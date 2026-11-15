@@ -38,6 +38,7 @@
 - **Light, dark or system theme:** set it in the viewer's menu or with the theme button at the bottom of the library sidebar. It applies to every open Paper Library tab. Separately, *Night mode* darkens the PDF pages themselves.
 - **Highlight in six colours:** select text and pick a colour, or press **H** for the highlighter tool.
 - **Notes:** click any highlight to add a note, change its colour, copy its text, or delete it. Undo and redo work for everything.
+- **Export highlights and notes as Markdown:** *Menu → Export highlights & notes*, or **Export highlights** in the library's details panel. You get the paper's title, authors, year, DOI/arXiv link, then every highlight in reading order with its page number, colour and note, ready for Obsidian, Notion or a literature review. Made in your browser; nothing is uploaded.
 - **Saves itself:** a few seconds after you stop, the PDF is saved back to the **same Drive file** as a new version. Links, sharing and folder location don't change.
 - **Highlights are standard PDF annotations.** They show up in Adobe Reader, Evince/Okular, Zotero, Chrome's viewer and Drive's own preview. Highlights you made in those apps can be edited here too.
 - **Safe saving:** if the file changed elsewhere since you opened it, you're asked before anything is overwritten. Drive keeps older versions.

@@ -33,6 +33,7 @@ allow cross-site requests. The installed extension is allowed to make them.
 | `js/drive.js` | Drive REST calls: download, update content in place, metadata |
 | `js/library-drive.js` | Library ↔ Drive mapping: root folder, folder tree, properties (chunked), shortcuts, resumable upload |
 | `js/annotations.js` | Splits `/Highlight` annotations out of a PDF and writes them back (pdf-lib) |
+| `js/export.js` | Highlights + notes → Markdown (shared by viewer and library; reads highlights with PDF.js in the library) |
 | `js/metadata.js` | Reads DOI/arXiv/title from page 1 and looks them up in Crossref/arXiv |
 | `lib/pdfjs/` | PDF.js 4.10.38 (`pdfjs-dist`): renderer, worker, viewer components, fonts, cMaps |
 | `lib/pdf-lib/` | pdf-lib 1.17.1 (ESM build) |

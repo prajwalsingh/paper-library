@@ -60,7 +60,9 @@ for host, where in sorted(found.items()):
         print(f'{"":30}{w}')
 unexpected = [h for h in found if not any(h == s.split('//')[1].split('/')[0] for s in connect)
               and h not in ('drive.google.com', 'accounts.google.com', 'console.cloud.google.com',
-                            'github.com', 'myaccount.google.com')]
+                            'github.com', 'myaccount.google.com',
+                            # links written into exported Markdown notes (js/export.js), never fetched
+                            'doi.org', 'arxiv.org')]
 print('\nUnexpected hosts:', ', '.join(unexpected) if unexpected else 'none')
 
 section('Network calls in our own code')
