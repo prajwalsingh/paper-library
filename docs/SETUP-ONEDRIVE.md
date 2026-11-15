@@ -82,6 +82,7 @@ Don't post it publicly. It isn't a password, but it identifies *your* app regist
 | Papers | PDFs in `Paper Library/` and its sub-folders (= collections) |
 | Highlights and notes | Inside each PDF, as standard annotations. OneDrive keeps old versions in *Version history*. |
 | Title, authors, year, favourites, extra collections | `Paper Library/.paper-library.json` (a small text file; don't delete it, or the details have to be looked up again) |
+| Supplementary files | `Paper Library/Supplementary/<paper title – author year>/`, one folder per paper. The link to the paper is kept in `.paper-library.json` (the folder name is only for you), so renaming or moving the paper keeps its files. |
 | Trash | `Paper Library/.trash/`, until you restore the paper or **Delete forever** / **Empty Trash**. Paper Library asks OneDrive to skip its recycle bin; if OneDrive doesn't allow that for your account, it tells you and opens the recycle bin for you to empty. |
 | Your sign-in | In your browser only (Chrome's session storage), cleared when Chrome closes |
 

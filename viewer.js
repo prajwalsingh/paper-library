@@ -32,6 +32,11 @@ const CLOUD = await loadProvider(new URLSearchParams(location.search).get('p') |
 const { auth, files: drive, library } = CLOUD;
 /** "Save to Drive" → "Save to OneDrive" when the file is in OneDrive. */
 const C = (s) => (CLOUD.id === 'gdrive' ? s : s.replace(/Google Drive/g, CLOUD.label).replace(/\bDrive\b/g, CLOUD.short));
+// Inside the supplementary reading page (supp.html), the viewer runs in a frame:
+// &embed=1. &supp=1 marks a supplementary PDF (not a library paper).
+// Without these the viewer behaves exactly as before.
+const EMBED = new URLSearchParams(location.search).has('embed');
+const SUPP_FILE = new URLSearchParams(location.search).has('supp');
 const viewerUrl = (id) => `viewer.html?id=${encodeURIComponent(id)}${CLOUD.id === 'gdrive' ? '' : '&p=' + CLOUD.id}`;
 
 const COLORS = [
@@ -210,6 +215,7 @@ function closeDialog(value) {
 // ---------------------------------------------------------------------------
 async function boot() {
   prefs = { ...DEFAULT_PREFS, ...(await store.get(Object.keys(DEFAULT_PREFS))) };
+  if (EMBED) prefs.sidebarOpen = false; // half a window is narrow; thumbnails stay one click away
   const params = new URLSearchParams(location.search);
   const id = params.get('id');
   const src = params.get('src');
@@ -289,9 +295,17 @@ async function openDocument(source) {
     state.fileId = meta.id;
     state.meta = meta;
     state.revisionId = meta.headRevisionId;
-    if (source.kind === 'drive' && state.editable) {
+    if (source.kind === 'drive' && state.editable && !SUPP_FILE) {
       // Remember when this paper was last opened (shown in the library as Recently Read).
       library.markRead(meta.id).catch(() => {});
+    }
+    if (source.kind === 'drive' && !EMBED) {
+      // The one addition to the normal viewer: a menu item when the paper has supplementary files.
+      library.suppCount(meta).then((n) => {
+        if (!n) return;
+        $('menuSupp').textContent = `Open with supplementary (${n})`;
+        $('menuSupp').hidden = false;
+      }).catch(() => {});
     }
     state.editable = meta.capabilities?.canEdit !== false;
     document.title = meta.name;
@@ -1086,7 +1100,8 @@ function setSidebarTab(tab) {
 function toggleSidebar(open = document.body.classList.contains('sidebar-closed')) {
   document.body.classList.toggle('sidebar-closed', !open);
   $('btnSidebar').classList.toggle('active', open);
-  setPref('sidebarOpen', open);
+  if (EMBED) prefs.sidebarOpen = open; // don't change the normal viewer's setting
+  else setPref('sidebarOpen', open);
   requestAnimationFrame(refitIfPreset);
 }
 
@@ -1288,7 +1303,8 @@ function wireStaticUi() {
       copyMd: () => exportHighlights('copy'),
       drive: () => window.open(state.meta?.webViewLink || `https://drive.google.com/file/d/${state.fileId}/view`, '_blank'),
       reload: () => location.reload(),
-      home: () => (location.href = 'library.html'),
+      home: () => ((EMBED ? window.top : window).location.href = 'library.html'),
+      supp: () => (location.href = `supp.html?id=${encodeURIComponent(state.fileId)}${CLOUD.id === 'gdrive' ? '' : '&p=' + CLOUD.id}`),
       shortcuts: showShortcuts,
     })[action]?.();
   });

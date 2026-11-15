@@ -74,7 +74,7 @@ The library opens, and a **Paper Library** folder is created in your My Drive.
 **Save the client ID somewhere private**, such as a password manager or a private note.
 You need it again whenever you set up Paper Library on another computer or browser profile:
 
-1. Install the extension there ([README → Install](../README.md#install)).
+1. Install the extension there ([install guide](https://prajwalsingh.github.io/paper-library/#install)).
 2. Click the toolbar icon, paste **the same client ID**, and sign in.
 
 That's all. The extension ID, and therefore the redirect URI, is identical on every

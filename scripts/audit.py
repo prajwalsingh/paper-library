@@ -38,7 +38,7 @@ section('Network lock (Content Security Policy, enforced by Chrome)')
 print('The extension\'s pages can only connect to its own files and:')
 for s in connect:
     print('   ', s)
-for d in ('default-src', 'img-src', 'font-src', 'frame-src', 'form-action'):
+for d in ('default-src', 'img-src', 'media-src', 'font-src', 'frame-src', 'form-action'):
     print(f'{d}: {" ".join(directives.get(d, ["(not set)"]))}')
 print('Any other request (fetch, XHR, image, beacon, frame, form) is refused by Chrome,')
 print('including from the bundled third-party libraries.')

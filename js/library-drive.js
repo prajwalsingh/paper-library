@@ -13,9 +13,14 @@
 //     numbered chunks: dphT0, dphT1, …
 //   * A file can live in only one Drive folder. Putting a paper into a second
 //     collection creates a Drive *shortcut* there (one file, two places).
+//   * Supplementary files sit in Paper Library/Supplementary/<paper name>/.
+//     That "Supplementary" folder is marked dphSuppRoot=1 (so it is never shown
+//     as a collection), each paper's folder carries dphSuppFor=<paper id>, and
+//     the paper itself keeps the number of files in dphSn (for the 📎 badge).
 
 import { API, UPLOAD, authedFetch, patchMetadata } from './drive.js';
 import { getToken } from './auth.js';
+import { suppFolderName } from './supplementary.js';
 
 const FOLDER = 'application/vnd.google-apps.folder';
 const SHORTCUT = 'application/vnd.google-apps.shortcut';
@@ -180,8 +185,8 @@ export async function loadLibrary() {
   let level = [root.id];
   while (level.length) {
     const kids = await inBatches(level, 40, (ids) =>
-      listAll(`mimeType='${FOLDER}' and trashed=false and ${parentsClause(ids)}`, 'id,name,parents')
-    );
+      listAll(`mimeType='${FOLDER}' and trashed=false and ${parentsClause(ids)}`, 'id,name,parents,properties')
+    ).then((fs) => fs.filter((f) => f.properties?.dphSuppRoot !== '1')); // supplementary files are not a collection
     for (const f of kids) folders.push({ id: f.id, name: f.name, parentId: f.parents?.[0] });
     level = kids.map((f) => f.id);
   }
@@ -235,6 +240,7 @@ function toPaper(f) {
     collections: f.parents ? [...f.parents] : [],
     shortcuts: [],
     meta: decodeMeta(f.properties),
+    suppCount: Number(f.properties?.dphSn) || 0,
     webViewLink: f.webViewLink,
   };
 }
@@ -276,6 +282,10 @@ export async function deleteShortcut(id) {
  */
 export async function deleteForever(id) {
   try {
+    const folder = await suppFolder(id);
+    if (folder) await authedFetch(`${API}/files/${folder.id}?supportsAllDrives=true`, { method: 'DELETE' }); // with its files
+  } catch {}
+  try {
     for (const sc of await listAll(`shortcutDetails.targetId=${quote(id)}`, 'id')) {
       await authedFetch(`${API}/files/${sc.id}?supportsAllDrives=true`, { method: 'DELETE' }).catch(() => {});
     }
@@ -309,26 +319,30 @@ export async function markRead(id, when = new Date()) {
  * upload progress.
  */
 export async function uploadPdf(blob, name, parentId, properties, onProgress) {
+  return toPaper(await uploadFile(blob, name, parentId, PDF, { dphLib: '1', ...properties }, onProgress));
+}
+
+async function uploadFile(blob, name, parentId, mimeType, properties, onProgress) {
   const init = await authedFetch(
     `${UPLOAD}/files?uploadType=resumable&supportsAllDrives=true&fields=${encodeURIComponent(FILE_FIELDS)}`,
     {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json; charset=UTF-8',
-        'X-Upload-Content-Type': PDF,
+        'X-Upload-Content-Type': mimeType,
         'X-Upload-Content-Length': String(blob.size),
       },
-      body: JSON.stringify({ name, mimeType: PDF, parents: [parentId], properties: { dphLib: '1', ...properties } }),
+      body: JSON.stringify({ name, mimeType, parents: [parentId], ...(properties ? { properties } : {}) }),
     }
   );
   const uploadUrl = init.headers.get('Location');
   if (!uploadUrl) throw new Error('Drive did not return an upload URL');
   const token = await getToken();
-  const file = await new Promise((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('PUT', uploadUrl);
     xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-    xhr.setRequestHeader('Content-Type', PDF);
+    xhr.setRequestHeader('Content-Type', mimeType);
     xhr.upload.onprogress = (e) => e.lengthComputable && onProgress?.(e.loaded, e.total);
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText));
@@ -337,7 +351,6 @@ export async function uploadPdf(blob, name, parentId, properties, onProgress) {
     xhr.onerror = () => reject(new Error('Network error during upload'));
     xhr.send(blob);
   });
-  return toPaper(file);
 }
 
 /**
@@ -358,4 +371,75 @@ export async function pdfSource(id) {
 /** Paper details for the viewer's Markdown export (Drive keeps them on the file itself). */
 export async function paperDetails(meta) {
   return decodeMeta(meta.properties);
+}
+
+/** Number of supplementary files, for the viewer's "Open with supplementary" item. */
+export async function suppCount(meta) {
+  return Number(meta.properties?.dphSn) || 0;
+}
+
+// ---------------------------------------------------------------------------
+// Supplementary files
+// ---------------------------------------------------------------------------
+let suppRootId = null;
+
+/** The "Supplementary" folder in the library (created on first upload). */
+async function ensureSuppRoot() {
+  if (suppRootId) return suppRootId;
+  const root = await ensureRoot();
+  const [found] = await listAll(
+    `mimeType='${FOLDER}' and trashed=false and ${quote(root.id)} in parents and properties has { key='dphSuppRoot' and value='1' }`,
+    'id'
+  );
+  const f = found || (await createResource({ name: 'Supplementary', mimeType: FOLDER, parents: [root.id], properties: { dphSuppRoot: '1' } }));
+  return (suppRootId = f.id);
+}
+
+/** The paper's own folder, found by the paper's ID; created when `paper` is given. */
+async function suppFolder(paperId, paper = null) {
+  const [found] = await listAll(
+    `mimeType='${FOLDER}' and trashed=false and properties has { key='dphSuppFor' and value=${quote(paperId)} }`,
+    'id,name'
+  );
+  if (found || !paper) return found || null;
+  return createResource({ name: suppFolderName(paper), mimeType: FOLDER, parents: [await ensureSuppRoot()], properties: { dphSuppFor: paperId } });
+}
+
+const toSupp = (f) => ({ id: f.id, name: f.name, mimeType: f.mimeType, size: Number(f.size) || 0, modified: f.modifiedTime, webViewLink: f.webViewLink });
+const byName = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+
+/**
+ * The paper's supplementary files, sorted by name ("File S2" before "File S10").
+ * If `knownCount` differs (files added or removed in Drive itself), the badge count is corrected.
+ */
+export async function listSupplementary(paperId, knownCount = null) {
+  const folder = await suppFolder(paperId);
+  const files = folder
+    ? (await listAll(`trashed=false and mimeType!='${FOLDER}' and ${quote(folder.id)} in parents`, 'id,name,mimeType,size,modifiedTime,webViewLink')).map(toSupp).sort(byName)
+    : [];
+  if (knownCount != null && knownCount !== files.length) await setCount(paperId, files.length).catch(() => {});
+  return files;
+}
+
+const setCount = (paperId, n) => patchMetadata(paperId, { properties: { dphSn: n ? String(n) : null } });
+
+async function recount(paperId) {
+  const n = (await listSupplementary(paperId)).length;
+  await setCount(paperId, n);
+  return n;
+}
+
+/** Uploads one file (any type) to the paper's folder. Returns { file, count }. */
+export async function uploadSupplementary(paper, file, onProgress) {
+  const folder = await suppFolder(paper.id, paper);
+  const f = await uploadFile(file, file.name, folder.id, file.type || 'application/octet-stream', null, onProgress);
+  return { file: toSupp(f), count: await recount(paper.id) };
+}
+
+export const renameSupplementary = (fileId, name) => patchMetadata(fileId, { name });
+
+/** Moves the file to Drive's trash (restorable there for 30 days). Returns the new count. */
+export async function deleteSupplementary(paperId, fileId) {
+  await patchMetadata(fileId, { trashed: true });
+  return recount(paperId);
 }

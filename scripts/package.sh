@@ -13,6 +13,7 @@ OUT="dist/${NAME}.zip"
 
 FILES=(manifest.json background.js content.js content.css
        viewer.html viewer.css viewer.js library.html library.css library.js
+       supp.html supp.css supp.js
        js icons lib LICENSE)
 
 STAGE=$(mktemp -d)

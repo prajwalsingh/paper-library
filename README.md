@@ -14,19 +14,23 @@
   Collections are plain folders. No server, no tracking, and your papers never leave your own cloud.
 </p>
 
+<h3 align="center">🌐 <a href="https://prajwalsingh.github.io/paper-library/">prajwalsingh.github.io/paper-library</a></h3>
+<p align="center"><i>Features, interactive install guide, privacy checker, FAQ and release history.</i></p>
+
 <p align="center">
-  <a href="#install">Install</a> ·
+  <a href="https://prajwalsingh.github.io/paper-library/#install">Install</a> ·
   <a href="docs/SETUP.md">Google setup</a> ·
   <a href="docs/SETUP-ONEDRIVE.md">OneDrive setup</a> ·
-  <a href="#no-data-sharing-and-how-to-check">Privacy &amp; proof</a> ·
-  <a href="#how-it-works">How it works</a> ·
+  <a href="docs/SECURITY.md">Security</a> ·
+  <a href="docs/PRIVACY.md">Privacy</a> ·
   <a href="docs/DEVELOPMENT.md">Development</a>
 </p>
 
 > [!TIP]
-> **🆕 Latest version: [v2.1.0](docs/releases/v2.1.0.md), updated 15 November 2026.**
-> Click a paper and the details panel now shows **which collections it is in**, and the sidebar highlights them.
-> [v2.0.0](docs/releases/v2.0.0.md) added **OneDrive**, **Delete forever / Empty Trash** and Markdown export.
+> **🆕 Latest version: [v2.2.0](docs/releases/v2.2.0.md), updated 16 November 2026.**
+> **Supplementary reading mode:** attach supplementary files (PDFs, figures, data tables, text, videos) to a paper and
+> read them **side by side** with it. [v2.1.0](docs/releases/v2.1.0.md) shows which collections a paper is in;
+> [v2.0.0](docs/releases/v2.0.0.md) added **OneDrive** and **Delete forever**.
 >
 > **Installed an older copy?** Check your version in `chrome://extensions`, then update: run `git pull` in your
 > Paper Library folder (or download the [latest release](https://github.com/prajwalsingh/paper-library/releases/latest)
@@ -40,272 +44,71 @@
 
 ---
 
-![The viewer: highlights in four colours, a note on a highlight, and the highlights list in the sidebar](docs/screenshots/viewer.png)
+![The viewer: highlights in several colours, a note on a highlight, and the highlights list in the sidebar](docs/screenshots/viewer.png)
 
-## Features
+## What it does
 
-### 📖 A real PDF reader for Drive files
-- **Desktop look and feel:** inspired by GNOME Document Viewer, with page thumbnails, the table of contents, find (Ctrl F) and zoom.
-- **Light, dark or system theme:** set it in the viewer's menu or with the theme button at the bottom of the library sidebar. It applies to every open Paper Library tab. Separately, *Night mode* darkens the PDF pages themselves.
-- **Highlight in six colours:** select text and pick a colour, or press **H** for the highlighter tool.
-- **Notes:** click any highlight to add a note, change its colour, copy its text, or delete it. Undo and redo work for everything.
-- **Export highlights and notes as Markdown:** *Menu → Export highlights & notes*, or **Export highlights** in the library's details panel. You get the paper's title, authors, year, DOI/arXiv link, then every highlight in reading order with its page number, colour and note, ready for Obsidian, Notion or a literature review. Made in your browser; nothing is uploaded.
-- **Saves itself:** a few seconds after you stop, the PDF is saved back to the **same Drive file** as a new version. Links, sharing and folder location don't change.
-- **Highlights are standard PDF annotations.** They show up in Adobe Reader, Evince/Okular, Zotero, Chrome's viewer and Drive's own preview. Highlights you made in those apps can be edited here too.
-- **Safe saving:** if the file changed elsewhere since you opened it, you're asked before anything is overwritten. Drive keeps older versions.
+- 📖 **A real PDF reader for your cloud files:** thumbnails, outline, find, zoom, light/dark theme.
+- 🖍️ **Highlights and notes in six colours, saved inside the PDF** as standard annotations, on the same file. They open in any PDF reader.
+- 📚 **A Mendeley-style library** whose collections are plain folders, with details filled in automatically from DOI / arXiv.
+- 📎 **Supplementary reading mode:** attach a paper's supplementary files and read them side by side with it: PDFs (highlightable), figures, CSV/TSV tables, text and videos.
+- ☁️ **Google Drive or OneDrive** (personal, work or school), switchable in Settings.
+- 📝 **Export highlights and notes as Markdown**, for Obsidian, Notion or a literature review.
+- 🔒 **No server, no tracking.** A network lock in `manifest.json` lets the extension talk only to your cloud, Crossref and arXiv.
 
-### 📚 A Mendeley-style library
-![The library: collections in the sidebar and papers with authors, year, title, source and date added](docs/screenshots/library.png)
+**See everything, with screenshots, on the [website](https://prajwalsingh.github.io/paper-library/#features).**
 
-- **Collections and sub-collections**, which are real **folders in Google Drive** under one `Paper Library` folder.
-- **Authors, year, title and source are filled in automatically** from the paper's DOI or arXiv ID, using the free Crossref and arXiv databases. You can edit them all.
-- **Upload PDFs or a whole folder:** the folder becomes a collection, and its subfolders become sub-collections. You choose where it goes; **Top level** is preselected.
-- **Drag and drop:** drag papers onto a collection to move them. **Also add to…** lists a paper in a second collection as a Drive shortcut.
-- **Reorganise collections:** drag a collection onto another one, or onto the **COLLECTIONS** heading to make it top level. You can also use **⋯ → Move to…**. Its papers and sub-collections move with it.
-- **Quick views:** Recently Added, Recently Read, Favorites (Drive's ★), Unsorted, Duplicates, and Trash (Drive's trash). In Trash, **Restore** papers, or **Delete forever** / **Empty Trash** to remove them for good (after a confirmation).
-- **See where a paper lives:** click any paper (in All References, a search, anywhere) and the details panel lists its collections. The same collections light up in the sidebar; click one to jump there.
-- **Search** across title, authors, source and year, and sort by any column.
+## Install (short version)
 
-| Details panel | Dark mode, papers selected |
-|---|---|
-| ![Details panel with editable title, authors, year, source, DOI and arXiv ID](docs/screenshots/library-details.png) | ![Library in dark mode with the actions for selected papers](docs/screenshots/library-dark.png) |
+1. **Download** the [latest release](https://github.com/prajwalsingh/paper-library/releases/latest) zip and unzip it somewhere permanent, **or** clone:
+   ```bash
+   git clone https://github.com/prajwalsingh/paper-library.git
+   ```
+2. Open `chrome://extensions` → switch on **Developer mode** → **Load unpacked** → pick the folder with `manifest.json`.
+   The extension ID is `hadmfffnocpeglonjioajbpdfbkbjekf` on every computer.
+3. Click the pinned icon, choose **Google Drive** or **OneDrive**, and do the one-time sign-in setup:
+   [Google guide](docs/SETUP.md) · [OneDrive guide](docs/SETUP-ONEDRIVE.md).
+   You create your **own** free client ID, so the permission belongs to you. Keep that ID private.
 
----
-
-## Install
-
-Paper Library is installed straight from this repository (Chrome calls this an
-"unpacked" extension). It takes about 10 minutes the first time, mostly for the
-one-time Google sign-in setup.
-
-### 1. Download
-
-Either:
-- **Download** `paper-library-vX.Y.Z.zip` from the [**latest release**](https://github.com/prajwalsingh/paper-library/releases/latest),
-  optionally [check its checksum](docs/SECURITY.md#d-check-your-download), and unzip it somewhere permanent (e.g. `~/Apps/paper-library`), **or**
-- **Clone** the repository:
-  ```bash
-  git clone https://github.com/prajwalsingh/paper-library.git
-  ```
-
-> Keep the folder after installing. Chrome runs an unpacked extension straight from that folder.
-
-### 2. Add it to Google Chrome
-
-1. Open **`chrome://extensions`** in the address bar.
-2. Switch on **Developer mode** (top-right corner).
-3. Click **Load unpacked** and select the folder that contains `manifest.json`.
-4. *Paper Library* appears with ID **`hadmfffnocpeglonjioajbpdfbkbjekf`**.
-   This ID is the same on every computer, which keeps the Google setup below simple.
-5. Click the puzzle-piece icon in Chrome's toolbar and **pin** *Paper Library*.
-
-It also works in other Chromium browsers that support extensions (Edge, Brave, Chromium).
-
-### 3. Connect it to your cloud (one time)
-
-Click the pinned icon. First choose where your library lives: **Google Drive** or **OneDrive**.
-You can switch later in **Settings**. Each cloud keeps its own library, and nothing is copied or deleted.
-
-#### Google Drive
-
-The setup page looks like this:
-
-![First-run setup page with the redirect URI to copy and a field for the client ID](docs/screenshots/setup.png)
-
-Google only lets an app read and update your Drive if it has its own sign-in ID
-(an *OAuth client ID*). With Paper Library, **you create your own**, for free, in a few clicks.
-That means the Drive permission you grant goes to *your own* Google project, not to anyone else.
-👉 **Step-by-step guide: [docs/SETUP.md](docs/SETUP.md).**
-
-In short: create a Google Cloud project → enable the Drive API → create a
-"Web application" OAuth client with the redirect URI shown on the setup page →
-paste the client ID → **Sign in with Google**.
-
-> [!TIP]
-> **Save your client ID somewhere private**, such as a password manager or a private note.
-> On a new computer you then only install the extension and paste the same client ID. No new
-> Google Cloud setup is needed, because the extension ID (and so the redirect URI) is the same everywhere.
-> **Don't make it public** (in a repository, issue, screenshot or chat). It isn't a password, but
-> it identifies *your* Google project. Keeping it private means nobody else can build on your
-> project or use up its limits.
-
-#### OneDrive (personal, work or school)
-
-Same idea with Microsoft: you register your own free app in **Microsoft Entra**, so the OneDrive
-permission goes to *your own* app registration.
-👉 **Step-by-step guide: [docs/SETUP-ONEDRIVE.md](docs/SETUP-ONEDRIVE.md).**
-
-In short: Entra → **App registrations** → **New registration** → *any organizational directory and
-personal Microsoft accounts* → redirect URI of type **Single-page application** (the one shown on the
-setup page) → copy the **Application (client) ID** → paste it → **Sign in with Microsoft**.
-No client secret is needed.
-
-### 4. Use it
-
-- **Toolbar icon** → opens the **library**. On a Drive file page, it opens that PDF instead.
-- **On drive.google.com**, open or select a PDF and click the blue **Open in Paper Library** button (bottom right).
-- **Bring your papers in:** in the library, click **Import folder** and pick a folder of PDFs.
+The [website's install guide](https://prajwalsingh.github.io/paper-library/#install) walks through each step with copy buttons.
 
 ### Updating
 
-Updates never install themselves. You decide when to update:
-download the new release (or `git pull`) into the same folder, then click the
-**reload ⟳** icon on the *Paper Library* card in `chrome://extensions`.
-The [releases page](https://github.com/prajwalsingh/paper-library/releases) lists what changed in each version.
+Updates never install themselves. Run `git pull` in your Paper Library folder (or unzip the new release
+over it), then click **⟳ reload** on the *Paper Library* card in `chrome://extensions`.
+Your library, highlights and client IDs stay as they are. What changed: [release notes](docs/releases/).
 
----
+## Check the privacy yourself
 
-## No data sharing, and how to check
-
-- **No server, no analytics, no tracking.** The author receives nothing. Your papers, highlights and library details live only in **your** Google Drive.
-- **Your own sign-in.** Drive access is granted to a Google project that *you* create and control. You can revoke it anytime at <https://myaccount.google.com/permissions>.
-- **A network lock enforced by Chrome.** The extension's [`manifest.json`](manifest.json) contains a Content Security Policy that allows connections **only** to:
-
-  | Destination | Why |
-  |---|---|
-  | `www.googleapis.com`, `oauth2.googleapis.com` | Google Drive and Google sign-in |
-  | `graph.microsoft.com`, `login.microsoftonline.com` | OneDrive (Microsoft Graph) and Microsoft sign-in |
-  | `api.onedrive.com`, `*.1drv.com`, `*.sharepoint.com`, `*.microsoftpersonalcontent.com` | Microsoft's own storage servers, where OneDrive sends file downloads and uploads ¹ |
-  | `api.crossref.org`, `export.arxiv.org` | Paper details, looked up by DOI / arXiv ID / title only (never the PDF) |
-
-  ¹ OneDrive hands out short-lived download/upload links on servers whose names vary per account
-  (e.g. `contoso-my.sharepoint.com`), so these are allowed by Microsoft domain (`*.`). They are
-  all Microsoft's domains; only your own OneDrive files are fetched from or sent there.
-
-  Chrome blocks every other connection before it leaves your computer, including from the bundled libraries.
-
-**Check it yourself:**
-
-| How | What you'll see |
-|---|---|
-| Open `manifest.json` → `content_security_policy` | The allowed websites after `connect-src` |
-| Library page → right-click → **Inspect** → **Network** tab | Requests only to your cloud (Google or Microsoft), Crossref and arXiv |
-| In that **Console**, run `fetch('https://example.com')` | *"Refused to connect because it violates the document's Content Security Policy"* |
-| `python3 scripts/audit.py` | Permissions, the lock, and every website and network call in the code |
-| `python3 scripts/audit.py --libs` | Proof that the bundled PDF.js and pdf-lib are byte-for-byte the official releases |
-| `sha256sum -c paper-library-vX.Y.Z.zip.sha256` | That your download is exactly the published release |
-
-More detail: [docs/SECURITY.md](docs/SECURITY.md) · Privacy policy: [docs/PRIVACY.md](docs/PRIVACY.md)
-
----
-
-## How it works
-
-```
-                 ┌────────────────────── your Google Drive ──────────────────────┐
-                 │  Paper Library/                                                │
-                 │  ├── Neuroscience/            ← collection = folder            │
-                 │  │   └── paper.pdf            ← highlights inside the PDF,     │
-                 │  └── Domain Adaptation/          title/authors as file props   │
-                 └───────────▲──────────────────────────────┬─────────────────────┘
-                             │ save (new version)            │ download
-                 ┌───────────┴──────────────────────────────▼─────────────────────┐
-  Chrome         │  Library page  ── open ──►  Viewer (PDF.js)                    │
-  extension      │  (folders, details,          ├ highlights drawn as overlay      │
-                 │   uploads)                   └ pdf-lib writes /Highlight annots │
-                 └────────────────────────────────────────────────────────────────┘
+```bash
+python3 scripts/audit.py         # permissions, the network lock, every website the code can reach
+python3 scripts/audit.py --libs  # bundled PDF.js and pdf-lib are byte-for-byte the official releases
 ```
 
-- **Viewer.** [PDF.js](https://mozilla.github.io/pdf.js/) draws each page and an invisible text layer you select with. When a file opens, its highlights are taken out and drawn as an editable overlay. On save, [pdf-lib](https://pdf-lib.js.org/) writes them back as standard `/Highlight` annotations. Each one carries "multiply" blending, so the text stays crisp like under a real highlighter pen. The bytes are then uploaded to the **same file ID**.
-- **Library.** Collections are Drive folders. Paper details are saved as hidden Drive *properties* on each PDF, so they move with the file. A paper in two collections uses a Drive shortcut, because Drive allows only one folder per file. Favorites use Drive's star, and Trash is Drive's trash.
-- **Automatic details.** The first page is scanned for a DOI or arXiv ID, which is looked up in Crossref or arXiv. For papers already in Drive, PDF.js downloads only the first part of the file.
-- **Sign-in.** This uses `chrome.identity.launchWebAuthFlow` with your own OAuth client. You can pick any Google account, and the short-lived token stays in your browser.
-
-**On OneDrive** the layout is the same (a *Paper Library* folder, collections are folders,
-highlights inside the PDFs). OneDrive has no hidden file properties, shortcuts or stars that apps
-can use, so paper details, favourites and "also in this collection" live in one small file,
-`Paper Library/.paper-library.json`, keyed by each file's OneDrive ID (which survives moves and
-renames). Papers you move to Trash wait in a hidden `.trash` folder inside the library until you restore them
-or delete them forever. If OneDrive doesn't let apps skip its own recycle bin for your account, Paper Library
-says so and offers to open the recycle bin, so you can empty it yourself.
-Sign-in uses Microsoft's *authorization code + PKCE* flow with your own app registration.
-
-Everything stays plain files and folders in your cloud. **If you uninstall Paper Library, your papers, folders and highlights are all still there.**
-
-## Keyboard shortcuts
-
-| Viewer | | Library | |
-|---|---|---|---|
-| `H` | highlighter tool | `/` | search |
-| `Ctrl S` | save now | `Enter` | open selected paper |
-| `Ctrl Z` / `Ctrl Shift Z` | undo / redo | `Delete` | move to Trash (in Trash: delete forever) |
-| `Delete` | delete selected highlight | `Ctrl A` | select all |
-| `Ctrl F` | find | `Shift`+click | select a range |
-| `Ctrl +` / `−` / `0`, `Ctrl`+wheel | zoom | `Esc` | clear selection |
-| `Alt ←` / `Alt →` | back / forward after a link | | |
-| `F9` | sidebar | | |
-
-## Limitations
-
-- Encrypted or password-protected PDFs open **read-only**.
-- Saving rewrites the PDF file, which **invalidates digital signatures**.
-- View-only Drive files can be highlighted, but have to be saved with **Menu → Save a copy to Drive**.
-- Only text highlights can be edited. Other annotations (ink, sticky notes) are shown and kept as they are.
-- Automatic details work best for papers with a DOI or arXiv ID. Others fall back to the PDF's own text, and you can always fix them in the details panel.
-
-## FAQ
-
-**Why do I have to create a Google Cloud project?**
-So the Drive permission belongs to you. Reading and updating any file in your
-Drive needs Google's full Drive permission. With your own client ID, that
-permission is granted to *your own* project, nobody else can use it, and Google
-doesn't need to review a shared app.
-
-**Why isn't it on the Chrome Web Store?**
-On purpose. Store extensions update automatically, so a hijacked publisher
-account could push malicious code to every user. GitHub installs change only when
-you update them yourself. See [docs/SECURITY.md](docs/SECURITY.md).
-
-**"Access blocked: … admin" when signing in with a university or work account?**
-Your Workspace admin blocks unverified apps. Create the Cloud project inside your
-organisation with **Internal** audience, or ask IT to allow your client ID. See [docs/SETUP.md](docs/SETUP.md#troubleshooting).
-
-**Can several people share one client ID?**
-Yes, up to 100. Add their Google accounts as test users. Each person's files still stay in their own Drive. See [docs/SETUP.md](docs/SETUP.md#sharing-with-friends-or-lab-mates).
-
-**Can I use Google Drive and OneDrive at the same time?**
-One at a time. **Settings → Switch to …** changes which library you see; each cloud keeps its own
-library, client ID and sign-in, so switching back is instant. Papers are not copied between clouds.
-
-**"Need admin approval" when signing in with a university or work Microsoft account?**
-Your organisation only allows apps an admin has approved. Use a personal Microsoft account, or ask IT
-to approve your app registration. See [docs/SETUP-ONEDRIVE.md](docs/SETUP-ONEDRIVE.md#troubleshooting).
-
-**Does it work offline?** No. Files are read from and saved to your cloud.
+Or try the [interactive lock checker](https://prajwalsingh.github.io/paper-library/#privacy).
+Details: [SECURITY.md](docs/SECURITY.md) · [PRIVACY.md](docs/PRIVACY.md).
 
 ## Development
 
-There's a demo mode that runs the viewer and the library in a normal browser tab
-with a fake Drive. No Google account is needed:
+A demo mode runs the viewer and library with a fake cloud, no account needed:
 
 ```bash
-python3 dev/serve.py
-# open http://127.0.0.1:8765/library.html
+python3 dev/serve.py   # then open http://127.0.0.1:8765/library.html
 ```
 
-See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for the code structure, regenerating
-screenshots, and building a release.
+See [DEVELOPMENT.md](docs/DEVELOPMENT.md). The website is the single file [`docs/index.html`](docs/index.html).
 
 ## Acknowledgements
 
 Paper Library was built together with **Claude** (Anthropic's AI assistant), working in Claude Code.
+I brought the idea and the direction; Claude turned it into working code, tested every step and explained
+each design decision, so I learned how and why it all works. Thank you, Claude. 🙏 — *Prajwal Singh*
+([full note on the website](https://prajwalsingh.github.io/paper-library/#thanks)).
 
-I brought the idea and the direction: a reader that feels like a desktop PDF app,
-highlights that live inside the papers themselves, a Mendeley-style library made of
-plain Google Drive folders, and privacy you can verify rather than just trust.
-Claude turned those instructions into working code, tested every step, and explained
-each design decision along the way, so I learned how and why it all works while
-building it.
-
-Thank you, Claude, for the patience, the careful testing, and for making a tool I
-wanted for my own research real, and good enough to share. 🙏
-— *Prajwal Singh*
-
-Thanks also to the open-source projects and public services that make this possible:
-[PDF.js](https://mozilla.github.io/pdf.js/) (Mozilla), [pdf-lib](https://pdf-lib.js.org/),
-and the free bibliographic APIs of [Crossref](https://www.crossref.org/) and [arXiv](https://arxiv.org/).
+Built on [PDF.js](https://mozilla.github.io/pdf.js/), [pdf-lib](https://pdf-lib.js.org/), and the free APIs of
+[Crossref](https://www.crossref.org/) and [arXiv](https://arxiv.org/).
 
 ## License
 
-[MIT](LICENSE). Bundled third-party libraries keep their own licenses:
-PDF.js (Apache-2.0, `lib/pdfjs/LICENSE`) and pdf-lib (MIT, `lib/pdf-lib/LICENSE.md`).
+[MIT](LICENSE). Bundled libraries keep their own licenses: PDF.js (Apache-2.0, `lib/pdfjs/LICENSE`) and
+pdf-lib (MIT, `lib/pdf-lib/LICENSE.md`).

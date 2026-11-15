@@ -1,0 +1,865 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paper Library: read and highlight papers in your Google Drive or OneDrive</title>
+<meta name="description" content="A Chrome extension with a desktop-style PDF reader and a Mendeley-style library for the research papers in your own Google Drive or OneDrive. Highlights saved inside the PDF. No server, no tracking.">
+<link rel="icon" href="assets/icon128.png">
+<!-- This page loads nothing from other websites: no fonts, scripts, analytics or trackers. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<style>
+:root {
+  --bg: #fafafb; --bg-elev: #ffffff; --bg-sunk: #f1f2f5; --fg: #1d1f24; --muted: #5d6270; --border: #e2e4ea;
+  --accent: #3584e4; --accent-fg: #ffffff; --accent-soft: #e5effc; --good: #2e9d5a; --warn: #b7791f;
+  --hl-yellow: #f8e45c; --hl-green: #8ff0a4; --hl-blue: #99c1f1; --hl-pink: #f5a3c7;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.05), 0 8px 28px rgb(20 30 60 / 0.08);
+  --radius: 16px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17181c; --bg-elev: #212227; --bg-sunk: #1b1c20; --fg: #eceef2; --muted: #a2a7b3; --border: #33353c;
+    --accent: #78aeed; --accent-fg: #0f1a2b; --accent-soft: #1f2b3d; --good: #57d18a; --warn: #f0b04e;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 28px rgb(0 0 0 / 0.35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17181c; --bg-elev: #212227; --bg-sunk: #1b1c20; --fg: #eceef2; --muted: #a2a7b3; --border: #33353c;
+  --accent: #78aeed; --accent-fg: #0f1a2b; --accent-soft: #1f2b3d; --good: #57d18a; --warn: #f0b04e;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 28px rgb(0 0 0 / 0.35);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; animation: none !important; } }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Cantarell, Ubuntu, Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code, kbd, pre { font-family: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace; font-size: 0.88em; }
+code { background: var(--bg-sunk); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; overflow-wrap: anywhere; }
+kbd { display: inline-block; min-width: 1.8em; text-align: center; padding: 1px 7px; border-radius: 6px; border: 1px solid var(--border); border-bottom-width: 2px; background: var(--bg-elev); font-size: 0.82em; white-space: nowrap; }
+h1, h2, h3 { line-height: 1.2; margin: 0 0 0.5em; letter-spacing: -0.01em; }
+h2 { font-size: clamp(1.6rem, 3vw, 2.1rem); }
+h3 { font-size: 1.15rem; }
+p { margin: 0 0 1em; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+.muted { color: var(--muted); }
+.eyebrow { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+.mark { background: linear-gradient(transparent 55%, color-mix(in srgb, var(--hl-yellow) 75%, transparent) 55%); padding: 0 2px; }
+:root[data-theme="dark"] .mark { background: linear-gradient(transparent 55%, color-mix(in srgb, var(--hl-yellow) 35%, transparent) 55%); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mark { background: linear-gradient(transparent 55%, color-mix(in srgb, var(--hl-yellow) 35%, transparent) 55%); } }
+
+/* ---------- Top bar ---------- */
+.topbar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: saturate(1.6) blur(12px); border-bottom: 1px solid var(--border); }
+.topbar .wrap { display: flex; align-items: center; gap: 16px; height: 60px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--fg); white-space: nowrap; }
+.brand img { width: 28px; height: 28px; }
+.nav { display: flex; gap: 2px; margin-left: auto; }
+.nav a { color: var(--muted); padding: 6px 10px; border-radius: 8px; font-size: 0.92rem; font-weight: 500; }
+.nav a:hover { color: var(--fg); background: var(--bg-sunk); text-decoration: none; }
+.nav a.active { color: var(--accent); background: var(--accent-soft); }
+.icon-btn { display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-elev); color: var(--fg); cursor: pointer; }
+.icon-btn:hover { border-color: var(--accent); }
+.icon-btn svg { width: 18px; height: 18px; }
+#menuBtn { display: none; }
+@media (max-width: 880px) {
+  #menuBtn { display: inline-grid; margin-left: auto; }
+  .nav { display: none; position: absolute; top: 60px; left: 0; right: 0; flex-direction: column; padding: 8px 16px 14px; background: var(--bg-elev); border-bottom: 1px solid var(--border); box-shadow: var(--shadow); }
+  .nav.open { display: flex; }
+  .nav a { padding: 10px 12px; }
+}
+
+/* ---------- Buttons ---------- */
+.btn { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px; border-radius: 12px; font-weight: 600; font-size: 0.97rem; border: 1px solid var(--border); background: var(--bg-elev); color: var(--fg); cursor: pointer; }
+.btn:hover { text-decoration: none; border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn svg { width: 18px; height: 18px; }
+
+/* ---------- Hero ---------- */
+.hero { padding: 64px 0 40px; position: relative; overflow: hidden; }
+.hero::before {
+  content: ''; position: absolute; inset: -40% -10% auto; height: 620px; z-index: -1;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 18%, transparent), transparent 70%);
+}
+.hero-grid { display: grid; grid-template-columns: 1fr; gap: 36px; text-align: center; }
+.pill { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-elev); font-size: 0.86rem; color: var(--muted); }
+.pill b { background: var(--accent); color: var(--accent-fg); border-radius: 999px; padding: 1px 9px; font-size: 0.78rem; }
+.pill:hover { text-decoration: none; border-color: var(--accent); }
+.hero h1 { font-size: clamp(2.2rem, 5.4vw, 3.7rem); margin: 18px auto 16px; max-width: 900px; letter-spacing: -0.025em; }
+.hero .lead { font-size: clamp(1.05rem, 2vw, 1.25rem); color: var(--muted); max-width: 720px; margin: 0 auto 26px; }
+.cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.trust { display: flex; gap: 10px 22px; justify-content: center; flex-wrap: wrap; margin-top: 22px; color: var(--muted); font-size: 0.92rem; }
+.trust span { display: inline-flex; align-items: center; gap: 6px; }
+.trust svg { width: 16px; height: 16px; color: var(--good); }
+.shot-frame { border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-elev); box-shadow: var(--shadow); overflow: hidden; }
+.shot-frame .chrome { display: flex; gap: 6px; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--bg-sunk); }
+.shot-frame .chrome i { width: 11px; height: 11px; border-radius: 50%; background: var(--border); }
+.shot-frame img { display: block; width: 100%; height: auto; cursor: zoom-in; }
+
+/* ---------- Sections ---------- */
+section { padding: 72px 0; }
+section.alt { background: var(--bg-sunk); border-block: 1px solid var(--border); }
+.section-head { max-width: 720px; margin-bottom: 34px; }
+.section-head p { color: var(--muted); font-size: 1.05rem; }
+.card { background: var(--bg-elev); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
+.notice { display: flex; gap: 14px; align-items: flex-start; padding: 16px 18px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--border)); background: color-mix(in srgb, var(--warn) 9%, var(--bg-elev)); font-size: 0.95rem; text-align: left; }
+.notice svg { width: 22px; height: 22px; flex: none; color: var(--warn); margin-top: 2px; }
+.notice.info { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); background: color-mix(in srgb, var(--accent) 8%, var(--bg-elev)); }
+.notice.info svg { color: var(--accent); }
+.notice p:last-child { margin: 0; }
+
+/* Features */
+.tabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--bg-elev); border: 1px solid var(--border); margin-bottom: 26px; flex-wrap: wrap; }
+.tabs button { border: none; background: none; color: var(--muted); font: inherit; font-weight: 600; padding: 8px 16px; border-radius: 9px; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-fg); }
+.feature-panel { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 32px; align-items: start; }
+.feature-panel[hidden] { display: none; }
+@media (max-width: 900px) { .feature-panel { grid-template-columns: 1fr; } }
+.flist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.flist li { padding: 12px 14px; border-radius: 12px; border: 1px solid transparent; cursor: default; }
+.flist li:hover { background: var(--bg-elev); border-color: var(--border); }
+.flist b { display: block; margin-bottom: 2px; }
+.flist span { color: var(--muted); font-size: 0.95rem; }
+.feature-shots { display: grid; gap: 16px; position: sticky; top: 84px; }
+.swatches { display: flex; gap: 6px; margin-top: 6px; }
+.swatches i { width: 18px; height: 18px; border-radius: 5px; border: 1px solid rgb(0 0 0 / 0.08); }
+
+/* Install */
+.seg { display: inline-flex; padding: 4px; gap: 4px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-sunk); }
+.seg button { display: inline-flex; align-items: center; gap: 8px; border: none; background: none; font: inherit; font-weight: 600; color: var(--muted); padding: 8px 14px; border-radius: 9px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--bg-elev); color: var(--fg); box-shadow: 0 1px 3px rgb(0 0 0 / 0.12); }
+.seg svg { width: 18px; height: 18px; }
+.steps { counter-reset: step; display: grid; gap: 14px; margin-top: 22px; }
+.step { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 16px; padding: 20px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-elev); }
+.step::before { counter-increment: step; content: counter(step); display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); font-weight: 800; font-size: 1.1rem; }
+.step h3 { margin-top: 10px; }
+.step ol, .step ul { margin: 0 0 0.6em; padding-left: 1.2em; }
+.step li { margin: 4px 0; }
+.step p:last-child, .step ul:last-child, .step ol:last-child { margin-bottom: 0; }
+.copy-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; padding: 8px 8px 8px 12px; border-radius: 10px; background: var(--bg-sunk); border: 1px solid var(--border); }
+.copy-row code { background: none; border: none; padding: 0; flex: 1; min-width: 0; }
+.copy-btn { flex: none; height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-elev); color: var(--fg); font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+.copy-btn:hover { border-color: var(--accent); }
+.copy-btn.done { color: var(--good); border-color: var(--good); }
+.cloud-only[hidden] { display: none; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
+
+/* Privacy */
+.privacy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
+@media (max-width: 860px) { .privacy-grid { grid-template-columns: 1fr; } }
+.privacy-grid .card svg { width: 28px; height: 28px; color: var(--accent); margin-bottom: 10px; }
+.privacy-grid .card p { color: var(--muted); margin: 0; font-size: 0.95rem; }
+.lock { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 20px; align-items: start; }
+@media (max-width: 900px) { .lock { grid-template-columns: 1fr; } }
+table { width: 100%; border-collapse: collapse; font-size: 0.94rem; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-size: 0.76rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+tr:last-child td { border-bottom: none; }
+.table-card { padding: 6px 8px; overflow-x: auto; }
+.checker input { width: 100%; height: 46px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--fg); font: inherit; outline: none; }
+.checker input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.verdict { margin-top: 12px; padding: 12px 14px; border-radius: 12px; font-weight: 600; display: flex; gap: 10px; align-items: flex-start; }
+.verdict.ok { background: color-mix(in srgb, var(--good) 13%, transparent); color: var(--good); }
+.verdict.no { background: color-mix(in srgb, #e01b24 12%, transparent); color: #e5484d; }
+.verdict small { display: block; font-weight: 400; color: var(--muted); margin-top: 2px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chips button { border: 1px solid var(--border); background: var(--bg); color: var(--muted); border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 0.82rem; cursor: pointer; }
+.chips button:hover { color: var(--fg); border-color: var(--accent); }
+
+/* How it works */
+.diagram { padding: 24px; }
+.diagram svg { width: 100%; height: auto; display: block; }
+.diagram text { fill: var(--fg); font: 600 14px ui-sans-serif, system-ui, sans-serif; }
+.diagram .sub { fill: var(--muted); font-weight: 400; font-size: 12.5px; }
+.diagram .box { fill: var(--bg-elev); stroke: var(--border); stroke-width: 1.5; }
+.diagram .cloudbox { fill: var(--accent-soft); stroke: color-mix(in srgb, var(--accent) 50%, var(--border)); stroke-width: 1.5; }
+.diagram .arrow { stroke: var(--accent); stroke-width: 2; fill: none; marker-end: url(#arr); }
+.diagram .file { fill: var(--bg-elev); stroke: var(--border); }
+.how-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 20px; }
+@media (max-width: 760px) { .how-list { grid-template-columns: 1fr; } }
+.how-list .card h3 { display: flex; align-items: center; gap: 8px; }
+.how-list .card p { color: var(--muted); margin: 0; font-size: 0.96rem; }
+.badge { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; vertical-align: 2px; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+.badge-big { display: inline-flex; padding: 14px 18px; border-radius: 14px; background: color-mix(in srgb, var(--good) 12%, transparent); color: var(--good); font-weight: 700; margin-top: 18px; }
+
+/* Shortcuts */
+.kgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 760px) { .kgrid { grid-template-columns: 1fr; } }
+.kgrid td:first-child { white-space: nowrap; width: 1%; }
+
+/* FAQ */
+.faq-tools { display: flex; gap: 12px; margin-bottom: 18px; }
+.faq-tools input { flex: 1; height: 46px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-elev); color: var(--fg); font: inherit; outline: none; }
+.faq-tools input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+details.qa { border: 1px solid var(--border); border-radius: 14px; background: var(--bg-elev); margin-bottom: 10px; }
+details.qa summary { list-style: none; cursor: pointer; padding: 16px 18px; font-weight: 600; display: flex; justify-content: space-between; gap: 12px; }
+details.qa summary::-webkit-details-marker { display: none; }
+details.qa summary::after { content: '+'; color: var(--accent); font-size: 1.3rem; line-height: 1; transition: transform 0.15s; }
+details.qa[open] summary::after { transform: rotate(45deg); }
+details.qa .a { padding: 0 18px 16px; color: var(--muted); }
+details.qa .a p:last-child { margin: 0; }
+.tag { display: inline-block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 1px 8px; border-radius: 999px; background: var(--bg-sunk); color: var(--muted); margin-right: 6px; vertical-align: 2px; }
+.limits { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.limits li { padding-left: 26px; position: relative; color: var(--muted); }
+.limits li::before { content: '!'; position: absolute; left: 0; top: 2px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 0.72rem; font-weight: 800; background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+
+/* Releases */
+.timeline { position: relative; display: grid; gap: 16px; padding-left: 26px; }
+.timeline::before { content: ''; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 2px; background: var(--border); }
+.rel { position: relative; }
+.rel::before { content: ''; position: absolute; left: -26px; top: 22px; width: 16px; height: 16px; border-radius: 50%; background: var(--bg); border: 3px solid var(--border); }
+.rel.latest::before { border-color: var(--accent); background: var(--accent); }
+.rel .card { padding: 18px 20px; }
+.rel h3 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.rel .date { font-size: 0.85rem; font-weight: 500; color: var(--muted); }
+.rel ul { margin: 6px 0 8px; padding-left: 1.2em; color: var(--muted); }
+.new-tag { font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; background: var(--accent); color: var(--accent-fg); }
+
+/* Footer */
+footer { padding: 56px 0 40px; border-top: 1px solid var(--border); }
+.thanks { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 32px; }
+@media (max-width: 860px) { .thanks { grid-template-columns: 1fr; } }
+.thanks blockquote { margin: 0; padding: 0 0 0 18px; border-left: 3px solid var(--accent); color: var(--muted); }
+.foot-bottom { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.9rem; }
+
+/* Lightbox */
+dialog#lightbox { border: none; padding: 0; background: transparent; max-width: 96vw; max-height: 94vh; }
+dialog#lightbox::backdrop { background: rgb(0 0 0 / 0.75); }
+dialog#lightbox img { display: block; max-width: 96vw; max-height: 88vh; border-radius: 12px; }
+dialog#lightbox p { color: #ddd; text-align: center; margin: 10px 0 0; font-size: 0.92rem; }
+
+.reveal { opacity: 0; transform: translateY(14px); transition: opacity 0.5s ease, transform 0.5s ease; }
+.reveal.in { opacity: 1; transform: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<!-- SVG icons, reused below with <use href="#…"> -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 19h14"/></symbol>
+  <symbol id="i-gh" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
+  <symbol id="i-auto" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8.5"/></g><path fill="currentColor" d="M12 3.5a8.5 8.5 0 0 1 0 17z"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4.5M12 17.5v.01"/></g></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.5v.01"/></g></symbol>
+  <symbol id="i-server" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="4" width="16" height="6.5" rx="2"/><rect x="4" y="13.5" width="16" height="6.5" rx="2"/><path d="M3 21L21 3"/></g></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M11 12l8-8M16 7l2.5 2.5M14 9l2 2"/></g></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l7.5 3v5.5c0 4.5-3.2 8.2-7.5 9.5-4.3-1.3-7.5-5-7.5-9.5V6z"/><path d="M8.5 12l2.5 2.5 4.5-5" stroke-linecap="round"/></g></symbol>
+  <symbol id="i-drive" viewBox="0 0 24 24"><path fill="#34a853" d="M4.4 20h15.2l-3.1-5.4H1.3z" opacity=".95"/><path fill="#fbbc04" d="M8.3 3.6L1.3 14.6 4.4 20l7-12z"/><path fill="#4285f4" d="M15.7 3.6H8.3l7.6 11h7.4z"/></symbol>
+  <symbol id="i-onedrive" viewBox="0 0 24 24"><path fill="#0f78d4" d="M19.6 10.6a5.6 5.6 0 0 0-10.4-1.9A4.6 4.6 0 0 0 3 13a4 4 0 0 0 .2 1.2A3.6 3.6 0 0 0 5.4 20.5h13.2a4.1 4.1 0 0 0 1-9.9z"/></symbol>
+</svg>
+
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="assets/icon128.png" alt="">Paper Library</a>
+    <button class="icon-btn" id="menuBtn" aria-label="Menu" aria-expanded="false"><svg><use href="#i-menu"/></svg></button>
+    <nav class="nav" id="nav">
+      <a href="#features">Features</a>
+      <a href="#install">Install</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#how">How it works</a>
+      <a href="#shortcuts">Shortcuts</a>
+      <a href="#faq">FAQ</a>
+      <a href="#releases">What's new</a>
+    </nav>
+    <button class="icon-btn" id="themeBtn" title="Theme: system" aria-label="Change theme"><svg><use href="#i-auto"/></svg></button>
+  </div>
+</header>
+
+<main id="top">
+  <!-- ================= Hero ================= -->
+  <div class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <a class="pill" href="#releases" id="versionPill"><b>v—</b><span>What's new</span></a>
+        <h1>Read, highlight and organise papers <span class="mark">in your own cloud</span></h1>
+        <p class="lead">A Chrome extension with a desktop-style PDF reader and a Mendeley-style library for the research papers in your <b>Google Drive</b> or <b>OneDrive</b>. Highlights are saved <i>inside the PDF</i>, on the same file.</p>
+        <div class="cta">
+          <a class="btn primary" id="dlBtn" href="https://github.com/prajwalsingh/paper-library/releases/latest"><svg><use href="#i-down"/></svg>Download latest</a>
+          <a class="btn" href="#install">Install guide</a>
+          <a class="btn" href="https://github.com/prajwalsingh/paper-library"><svg><use href="#i-gh"/></svg>GitHub</a>
+        </div>
+        <div class="trust">
+          <span><svg><use href="#i-check"/></svg>No server</span>
+          <span><svg><use href="#i-check"/></svg>No tracking</span>
+          <span><svg><use href="#i-check"/></svg>Your own sign-in</span>
+          <span><svg><use href="#i-check"/></svg>Open source (MIT)</span>
+        </div>
+      </div>
+      <div class="shot-frame reveal">
+        <div class="chrome"><i></i><i></i><i></i></div>
+        <img class="themed" data-light="screenshots/viewer.png" data-dark="screenshots/viewer-dark.png" src="screenshots/viewer.png" width="2160" height="1290" alt="The viewer: highlights in several colours, a note on a highlight, and the highlights list in the sidebar">
+      </div>
+      <div class="notice" style="max-width:860px;margin:0 auto">
+        <svg><use href="#i-warn"/></svg>
+        <p><b>The only official source is <a href="https://github.com/prajwalsingh/paper-library">github.com/prajwalsingh/paper-library</a>.</b>
+        Paper Library is not on the Chrome Web Store or anywhere else; copies offered elsewhere are unofficial, so please don't install them.
+        <a href="https://github.com/prajwalsingh/paper-library/blob/main/docs/SECURITY.md#1-official-source-github-only">Why GitHub only?</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= Features ================= -->
+  <section id="features" class="alt">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <div class="eyebrow">Features</div>
+        <h2>A real reader, and a library made of plain folders</h2>
+        <p>Everything stays ordinary files and folders in your cloud. If you uninstall Paper Library, your papers, folders and highlights are all still there.</p>
+      </div>
+      <div class="tabs" role="tablist">
+        <button role="tab" aria-selected="true" data-tab="reader">📖 Reader</button>
+        <button role="tab" aria-selected="false" data-tab="library">📚 Library</button>
+      </div>
+
+      <div class="feature-panel" data-panel="reader">
+        <ul class="flist">
+          <li><b>Desktop look and feel</b><span>Inspired by GNOME Document Viewer: page thumbnails, table of contents, find (<kbd>Ctrl</kbd> <kbd>F</kbd>) and zoom.</span></li>
+          <li><b>Highlight in six colours</b><span>Select text and pick a colour, or press <kbd>H</kbd> for the highlighter tool.</span><div class="swatches"><i style="background:#f8e45c"></i><i style="background:#8ff0a4"></i><i style="background:#99c1f1"></i><i style="background:#f5a3c7"></i><i style="background:#ffbe6f"></i><i style="background:#dc8add"></i></div></li>
+          <li><b>Notes on highlights</b><span>Click any highlight to add a note, change its colour, copy its text or delete it. Undo and redo work for everything.</span></li>
+          <li><b>Saves itself, into the same file</b><span>A few seconds after you stop, the PDF is saved back to the same cloud file as a new version. Links, sharing and folder stay the same.</span></li>
+          <li><b>Standard PDF annotations</b><span>Highlights show up in Adobe Reader, Evince/Okular, Zotero, Chrome's viewer and Drive's preview, and ones made there can be edited here.</span></li>
+          <li><b>Export to Markdown</b><span>Title, authors, DOI/arXiv link, then every highlight in reading order with page, colour and note. Ready for Obsidian, Notion or a literature review.</span></li>
+          <li><b>Safe saving</b><span>If the file changed elsewhere since you opened it, you're asked before anything is overwritten.</span></li>
+          <li><b>Light, dark or system theme</b><span>Plus a separate <i>Night mode</i> that darkens the PDF pages themselves.</span></li>
+        </ul>
+        <div class="feature-shots">
+          <div class="shot-frame"><img class="themed" data-light="screenshots/viewer.png" data-dark="screenshots/viewer-dark.png" src="screenshots/viewer.png" width="2160" height="1290" alt="The PDF viewer with highlights and notes" loading="lazy"></div>
+        </div>
+      </div>
+
+      <div class="feature-panel" data-panel="library" hidden>
+        <ul class="flist">
+          <li><b>Collections are real folders</b><span>Collections and sub-collections are folders under one <code>Paper Library</code> folder in your Drive or OneDrive.</span></li>
+          <li><b>Details filled in automatically</b><span>Authors, year, title and source come from the paper's DOI or arXiv ID via the free Crossref and arXiv databases. You can edit everything.</span></li>
+          <li><b>Import PDFs or a whole folder</b><span>A folder becomes a collection and its subfolders become sub-collections.</span></li>
+          <li><b>Drag and drop</b><span>Drag papers onto a collection to move them; <i>Also add to…</i> lists a paper in a second collection. Drag collections to reorganise them.</span></li>
+          <li><b>See where a paper lives</b><span>Click any paper and the details panel lists its collections, while the sidebar highlights them. Click one to jump there.</span></li>
+          <li><b>Quick views</b><span>Recently Added, Recently Read, Favorites, Unsorted, Duplicates and Trash, with Restore, Delete forever and Empty Trash.</span></li>
+          <li><b>Search and sort</b><span>Search across title, authors, source and year; sort by any column.</span></li>
+          <li><b>Supplementary reading <span class="badge">New in 2.2</span></b><span>Attach a paper's supplementary files (PDFs, figures, CSV/TSV data, text, videos, anything) and read them side by side with it. Open several at once, resize each, and highlight supplementary PDFs too.</span></li>
+          <li><b>Google Drive or OneDrive</b><span>Personal, work or school accounts. Switch any time in Settings; each cloud keeps its own library.</span></li>
+        </ul>
+        <div class="feature-shots">
+          <div class="shot-frame"><img class="themed" data-light="screenshots/library.png" data-dark="screenshots/library-dark.png" src="screenshots/library.png" width="2160" height="1290" alt="The library: collections in the sidebar and a table of papers" loading="lazy"></div>
+          <div class="shot-frame"><img src="screenshots/library-details.png" width="2160" height="1290" alt="The details panel with the paper's collections, title, authors, year and source" loading="lazy"></div>
+          <div class="shot-frame"><img src="screenshots/supplementary.png" width="2160" height="1290" alt="Supplementary reading mode: the paper on the left, a data table and a figure open on the right" loading="lazy"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Install ================= -->
+  <section id="install">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <div class="eyebrow">Install</div>
+        <h2>Up and running in about 10 minutes</h2>
+        <p>Paper Library is installed straight from GitHub (Chrome calls it an "unpacked" extension). Most of the time goes into the one-time sign-in setup. Pick your cloud and follow along.</p>
+        <div class="seg" role="group" aria-label="Choose your cloud">
+          <button aria-pressed="true" data-cloud="gdrive"><svg><use href="#i-drive"/></svg>Google Drive</button>
+          <button aria-pressed="false" data-cloud="onedrive"><svg><use href="#i-onedrive"/></svg>OneDrive</button>
+        </div>
+      </div>
+
+      <div class="steps">
+        <div class="step reveal">
+          <div>
+            <h3>Download</h3>
+            <div class="two">
+              <div>
+                <p><b>Option A: the release zip.</b> Download <code>paper-library-vX.Y.Z.zip</code> from the <a href="https://github.com/prajwalsingh/paper-library/releases/latest">latest release</a>, optionally check it, and unzip it somewhere permanent (e.g. <code>~/Apps/paper-library</code>).</p>
+                <div class="copy-row"><code>sha256sum -c paper-library-vX.Y.Z.zip.sha256</code><button class="copy-btn">Copy</button></div>
+              </div>
+              <div>
+                <p><b>Option B: clone with git.</b> Easiest to update later with <code>git pull</code>.</p>
+                <div class="copy-row"><code>git clone https://github.com/prajwalsingh/paper-library.git</code><button class="copy-btn">Copy</button></div>
+              </div>
+            </div>
+            <p class="muted">Keep the folder after installing: Chrome runs an unpacked extension straight from it.</p>
+          </div>
+        </div>
+
+        <div class="step reveal">
+          <div>
+            <h3>Add it to Chrome</h3>
+            <ol>
+              <li>Open <code>chrome://extensions</code> and switch on <b>Developer mode</b> (top right).</li>
+              <li>Click <b>Load unpacked</b> and select the folder that contains <code>manifest.json</code>.</li>
+              <li><i>Paper Library</i> appears with this ID, the same on every computer:
+                <div class="copy-row"><code>hadmfffnocpeglonjioajbpdfbkbjekf</code><button class="copy-btn">Copy</button></div></li>
+              <li>Click the puzzle-piece icon in Chrome's toolbar and <b>pin</b> <i>Paper Library</i>.</li>
+            </ol>
+            <p class="muted">Also works in other Chromium browsers with extensions: Edge, Brave, Chromium.</p>
+          </div>
+        </div>
+
+        <div class="step reveal">
+          <div>
+            <h3>Connect your <span class="cloud-name">Google Drive</span> (one time)</h3>
+            <div class="cloud-only" data-for="gdrive">
+              <p>Google only lets an app use your Drive if it has its own sign-in ID (an <i>OAuth client ID</i>). With Paper Library <b>you create your own</b>, free, so the Drive permission goes to <i>your own</i> Google project and nobody else's.</p>
+              <ol>
+                <li>Create a Google Cloud project and enable the <b>Google Drive API</b>.</li>
+                <li>Create an OAuth client of type <b>Web application</b> with this redirect URI:
+                  <div class="copy-row"><code>https://hadmfffnocpeglonjioajbpdfbkbjekf.chromiumapp.org/</code><button class="copy-btn">Copy</button></div></li>
+                <li>Click the pinned icon, choose <b>Google Drive</b>, paste the client ID and click <b>Sign in with Google</b>.</li>
+              </ol>
+              <p><a class="btn" href="https://github.com/prajwalsingh/paper-library/blob/main/docs/SETUP.md">Step-by-step Google guide →</a></p>
+            </div>
+            <div class="cloud-only" data-for="onedrive" hidden>
+              <p>Same idea with Microsoft: you register your own free app in <b>Microsoft Entra</b>, so the OneDrive permission goes to <i>your own</i> app registration. Works with personal, work and school accounts. No client secret is needed.</p>
+              <ol>
+                <li>Entra → <b>App registrations</b> → <b>New registration</b>.</li>
+                <li>Account types: <b>any organizational directory and personal Microsoft accounts</b>.</li>
+                <li>Redirect URI, type <b>Single-page application</b>:
+                  <div class="copy-row"><code>https://hadmfffnocpeglonjioajbpdfbkbjekf.chromiumapp.org/</code><button class="copy-btn">Copy</button></div></li>
+                <li>Copy the <b>Application (client) ID</b>, click the pinned icon, choose <b>OneDrive</b>, paste it and click <b>Sign in with Microsoft</b>.</li>
+              </ol>
+              <p><a class="btn" href="https://github.com/prajwalsingh/paper-library/blob/main/docs/SETUP-ONEDRIVE.md">Step-by-step OneDrive guide →</a></p>
+            </div>
+            <div class="notice info">
+              <svg><use href="#i-key"/></svg>
+              <p><b>Save your client ID somewhere private</b> (password manager, private note). On a new computer you only install the extension and paste the same ID. <b>Don't make it public</b>: it isn't a password, but it identifies <i>your</i> project.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="step reveal">
+          <div>
+            <h3>Use it</h3>
+            <ul>
+              <li><b>Toolbar icon</b> opens the library. On a Drive file page, it opens that PDF instead.</li>
+              <li class="cloud-only" data-for="gdrive">On <b>drive.google.com</b>, open or select a PDF and click the blue <b>Open in Paper Library</b> button.</li>
+              <li><b>Bring your papers in:</b> click <b>Import folder</b> and pick a folder of PDFs.</li>
+              <li>Switch clouds any time in <b>Settings → Switch to …</b>. Nothing is copied or deleted.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="step reveal" id="updating">
+          <div>
+            <h3>Updating</h3>
+            <p>Updates never install themselves, so you decide when. Check your version in <code>chrome://extensions</code>; if it's older than <b class="latest-v">the latest</b>:</p>
+            <ol>
+              <li>Get the new code into the <b>same folder</b>: run <code>git pull</code> there, or unzip the new release over it.</li>
+              <li>Click <b>⟳ reload</b> on the <i>Paper Library</i> card in <code>chrome://extensions</code> (Chrome only re-reads <code>manifest.json</code> then), and reopen Paper Library tabs.</li>
+            </ol>
+            <p class="muted">Your library, highlights and client IDs stay exactly as they are.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Privacy ================= -->
+  <section id="privacy" class="alt">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <div class="eyebrow">Privacy</div>
+        <h2>No data sharing, and you can check it</h2>
+        <p>Privacy here isn't a promise you have to trust: it's enforced by Chrome, and you can verify every part of it.</p>
+      </div>
+      <div class="privacy-grid">
+        <div class="card reveal"><svg><use href="#i-server"/></svg><h3>No server, no tracking</h3><p>No analytics and no backend. The author receives nothing. Papers, highlights and details live only in your own cloud.</p></div>
+        <div class="card reveal"><svg><use href="#i-key"/></svg><h3>Your own sign-in</h3><p>Access goes to a Google project or Microsoft app that <i>you</i> create and control. Revoke it any time in your account's permissions page.</p></div>
+        <div class="card reveal"><svg><use href="#i-shield"/></svg><h3>A network lock</h3><p>The extension's Content Security Policy lists the only websites it may contact. Chrome blocks everything else before it leaves your computer.</p></div>
+      </div>
+
+      <div class="lock">
+        <div class="card table-card reveal">
+          <table>
+            <thead><tr><th>Allowed destination</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td><code>www.googleapis.com</code> <code>oauth2.googleapis.com</code></td><td>Google Drive and Google sign-in</td></tr>
+              <tr><td><code>graph.microsoft.com</code> <code>login.microsoftonline.com</code></td><td>OneDrive (Microsoft Graph) and Microsoft sign-in</td></tr>
+              <tr><td><code>api.onedrive.com</code> <code>*.1drv.com</code> <code>*.sharepoint.com</code> <code>*.microsoftpersonalcontent.com</code></td><td>Microsoft's storage servers. OneDrive hands out short-lived download/upload links whose server name varies per account, so these are allowed by Microsoft domain.</td></tr>
+              <tr><td><code>api.crossref.org</code> <code>export.arxiv.org</code></td><td>Paper details, looked up by DOI, arXiv ID or title only (never the PDF)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card checker reveal">
+          <h3>Try the lock</h3>
+          <p class="muted">Type any address and see whether Paper Library could connect to it.</p>
+          <label class="sr-only" for="hostInput">Website address</label>
+          <input id="hostInput" placeholder="e.g. google-analytics.com" autocomplete="off" spellcheck="false">
+          <div id="verdict" class="verdict" hidden></div>
+          <div class="chips" id="hostChips">
+            <button>www.googleapis.com</button><button>contoso-my.sharepoint.com</button><button>api.crossref.org</button><button>google-analytics.com</button><button>example.com</button>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="margin-top:36px" class="reveal">Check it yourself</h3>
+      <div class="card table-card reveal">
+        <table>
+          <thead><tr><th>How</th><th>What you'll see</th></tr></thead>
+          <tbody>
+            <tr><td>Open <code>manifest.json</code> → <code>content_security_policy</code></td><td>The allowed websites after <code>connect-src</code></td></tr>
+            <tr><td>Library page → right-click → <b>Inspect</b> → <b>Network</b></td><td>Requests only to your cloud, Crossref and arXiv</td></tr>
+            <tr><td>In that <b>Console</b>, run <code>fetch('https://example.com')</code></td><td><i>"Refused to connect because it violates the document's Content Security Policy"</i></td></tr>
+            <tr><td><code>python3 scripts/audit.py</code></td><td>Permissions, the lock, and every website and network call in the code</td></tr>
+            <tr><td><code>python3 scripts/audit.py --libs</code></td><td>The bundled PDF.js and pdf-lib are byte-for-byte the official releases</td></tr>
+            <tr><td><code>sha256sum -c paper-library-vX.Y.Z.zip.sha256</code></td><td>Your download is exactly the published release</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted" style="margin-top:14px">More: <a href="https://github.com/prajwalsingh/paper-library/blob/main/docs/SECURITY.md">Security</a> · <a href="https://github.com/prajwalsingh/paper-library/blob/main/docs/PRIVACY.md">Privacy policy</a>. This website itself also loads nothing from other sites.</p>
+    </div>
+  </section>
+
+  <!-- ================= How it works ================= -->
+  <section id="how">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <div class="eyebrow">How it works</div>
+        <h2>Plain files in your cloud, a smart page in your browser</h2>
+        <div class="seg" role="group" aria-label="Choose your cloud">
+          <button aria-pressed="true" data-cloud="gdrive"><svg><use href="#i-drive"/></svg>Google Drive</button>
+          <button aria-pressed="false" data-cloud="onedrive"><svg><use href="#i-onedrive"/></svg>OneDrive</button>
+        </div>
+      </div>
+
+      <div class="card diagram reveal">
+        <svg viewBox="0 0 900 360" role="img" aria-label="Diagram: your cloud holds a Paper Library folder with collection folders and PDFs; the Chrome extension's library page opens papers in the viewer, which downloads the PDF and saves highlights back as a new version.">
+          <defs><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--accent)"/></marker></defs>
+          <rect class="cloudbox" x="20" y="16" width="860" height="150" rx="16"/>
+          <text x="44" y="46">Your <tspan class="cloud-name">Google Drive</tspan></text>
+          <rect class="file" x="44" y="62" width="250" height="84" rx="10"/>
+          <text x="60" y="88">📁 Paper Library/</text>
+          <text x="80" y="110" class="sub">📁 Neuroscience/  ← collection</text>
+          <text x="80" y="130" class="sub">📁 Domain Adaptation/</text>
+          <rect class="file" x="320" y="62" width="250" height="84" rx="10"/>
+          <text x="336" y="88">📄 paper.pdf</text>
+          <text x="336" y="110" class="sub">highlights + notes inside the PDF</text>
+          <text x="336" y="130" class="sub">older versions kept by the cloud</text>
+          <rect class="file" x="596" y="62" width="260" height="84" rx="10"/>
+          <text x="612" y="88">🏷️ Title, authors, year…</text>
+          <text x="612" y="110" class="sub" id="metaWhere1">hidden Drive file properties</text>
+          <text x="612" y="130" class="sub" id="metaWhere2">travel with the file</text>
+          <path class="arrow" d="M380 250 C 380 210, 400 200, 410 172"/>
+          <path class="arrow" d="M520 172 C 530 200, 540 210, 540 250"/>
+          <text x="282" y="212" class="sub">save (new version)</text>
+          <text x="552" y="212" class="sub">download</text>
+          <rect class="box" x="20" y="256" width="860" height="88" rx="16"/>
+          <text x="44" y="284">Chrome extension</text>
+          <rect class="file" x="200" y="270" width="260" height="60" rx="10"/>
+          <text x="216" y="294">Library page</text>
+          <text x="216" y="314" class="sub">folders, details, uploads</text>
+          <path class="arrow" d="M462 300 H 528"/>
+          <text x="470" y="292" class="sub">open</text>
+          <rect class="file" x="534" y="270" width="322" height="60" rx="10"/>
+          <text x="550" y="294">Viewer (PDF.js + pdf-lib)</text>
+          <text x="550" y="314" class="sub">draws highlights, writes /Highlight annots</text>
+        </svg>
+      </div>
+
+      <div class="how-list">
+        <div class="card reveal"><h3>🖍️ Viewer</h3><p><a href="https://mozilla.github.io/pdf.js/">PDF.js</a> draws each page plus an invisible text layer you select with. Existing highlights become an editable overlay. On save, <a href="https://pdf-lib.js.org/">pdf-lib</a> writes them back as standard <code>/Highlight</code> annotations with "multiply" blending, so text stays crisp like under a real highlighter, and the bytes go to the <b>same file ID</b>.</p></div>
+        <div class="card reveal cloud-only" data-for="gdrive"><h3>📚 Library on Drive</h3><p>Collections are Drive folders. Paper details are hidden Drive <i>properties</i> on each PDF, so they move with the file. A paper in two collections uses a Drive shortcut (Drive allows one folder per file). Favorites use Drive's star; Trash is Drive's trash.</p></div>
+        <div class="card reveal cloud-only" data-for="onedrive" hidden><h3>📚 Library on OneDrive</h3><p>Same layout. OneDrive has no hidden file properties, shortcuts or stars for apps, so details, favourites and "also in this collection" live in one small file, <code>Paper Library/.paper-library.json</code>, keyed by each file's OneDrive ID (which survives moves and renames). Trash is a hidden <code>.trash</code> folder.</p></div>
+        <div class="card reveal"><h3>🔎 Automatic details</h3><p>The first page is scanned for a DOI or arXiv ID, which is looked up in Crossref or arXiv. For papers already in your cloud, PDF.js downloads only the first part of the file.</p></div>
+        <div class="card reveal"><h3>🔐 Sign-in</h3><p class="cloud-only" data-for="gdrive"><code>chrome.identity.launchWebAuthFlow</code> with your own OAuth client. Pick any Google account; the short-lived token stays in your browser.</p><p class="cloud-only" data-for="onedrive" hidden>Microsoft's <i>authorization code + PKCE</i> flow with your own app registration: no client secret, and tokens stay in Chrome's session storage, cleared when Chrome closes.</p></div>
+      </div>
+      <div class="badge-big reveal">✓ Uninstall Paper Library and your papers, folders and highlights are all still there.</div>
+    </div>
+  </section>
+
+  <!-- ================= Shortcuts ================= -->
+  <section id="shortcuts" class="alt">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <div class="eyebrow">Keyboard</div>
+        <h2>Shortcuts</h2>
+      </div>
+      <div class="kgrid">
+        <div class="card table-card reveal">
+          <table>
+            <thead><tr><th colspan="2">Viewer</th></tr></thead>
+            <tbody>
+              <tr><td><kbd>H</kbd></td><td>Highlighter tool</td></tr>
+              <tr><td><kbd>Ctrl</kbd> <kbd>S</kbd></td><td>Save now</td></tr>
+              <tr><td><kbd>Ctrl</kbd> <kbd>Z</kbd> / <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>Z</kbd></td><td>Undo / redo</td></tr>
+              <tr><td><kbd>Delete</kbd></td><td>Delete selected highlight</td></tr>
+              <tr><td><kbd>Ctrl</kbd> <kbd>F</kbd></td><td>Find</td></tr>
+              <tr><td><kbd>Ctrl</kbd> <kbd>+</kbd> <kbd>−</kbd> <kbd>0</kbd>, <kbd>Ctrl</kbd>+wheel</td><td>Zoom</td></tr>
+              <tr><td><kbd>Alt</kbd> <kbd>←</kbd> / <kbd>Alt</kbd> <kbd>→</kbd></td><td>Back / forward after a link</td></tr>
+              <tr><td><kbd>F9</kbd></td><td>Sidebar</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card table-card reveal">
+          <table>
+            <thead><tr><th colspan="2">Library</th></tr></thead>
+            <tbody>
+              <tr><td><kbd>/</kbd></td><td>Search</td></tr>
+              <tr><td><kbd>Enter</kbd></td><td>Open selected paper</td></tr>
+              <tr><td><kbd>Delete</kbd></td><td>Move to Trash (in Trash: delete forever)</td></tr>
+              <tr><td><kbd>Ctrl</kbd> <kbd>A</kbd></td><td>Select all</td></tr>
+              <tr><td><kbd>Shift</kbd>+click</td><td>Select a range</td></tr>
+              <tr><td><kbd>Esc</kbd></td><td>Clear selection</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FAQ ================= -->
+  <section id="faq">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <div class="eyebrow">FAQ</div>
+        <h2>Questions and limitations</h2>
+      </div>
+      <div class="faq-tools">
+        <label class="sr-only" for="faqSearch">Search questions</label>
+        <input id="faqSearch" placeholder="Search questions… (e.g. admin, offline, OneDrive)" autocomplete="off">
+      </div>
+      <div id="faqList">
+        <details class="qa"><summary><span><span class="tag">Google</span>Why do I have to create a Google Cloud project?</span></summary><div class="a"><p>So the Drive permission belongs to you. Reading and updating any file in your Drive needs Google's full Drive permission. With your own client ID that permission is granted to <i>your own</i> project, nobody else can use it, and Google doesn't need to review a shared app.</p></div></details>
+        <details class="qa"><summary><span><span class="tag">Security</span>Why isn't it on the Chrome Web Store?</span></summary><div class="a"><p>On purpose. Store extensions update automatically, so a hijacked publisher account could push malicious code to every user. A GitHub install changes only when you update it yourself. See <a href="https://github.com/prajwalsingh/paper-library/blob/main/docs/SECURITY.md">SECURITY.md</a>.</p></div></details>
+        <details class="qa"><summary><span><span class="tag">Google</span>"Access blocked: … admin" with a university or work account?</span></summary><div class="a"><p>Your Workspace admin blocks unverified apps. Create the Cloud project inside your organisation with <b>Internal</b> audience, or ask IT to allow your client ID. See <a href="https://github.com/prajwalsingh/paper-library/blob/main/docs/SETUP.md#troubleshooting">the troubleshooting guide</a>.</p></div></details>
+        <details class="qa"><summary><span><span class="tag">Google</span>Can several people share one client ID?</span></summary><div class="a"><p>Yes, up to 100. Add their Google accounts as test users. Each person's files still stay in their own Drive. See <a href="https://github.com/prajwalsingh/paper-library/blob/main/docs/SETUP.md#sharing-with-friends-or-lab-mates">sharing with lab mates</a>.</p></div></details>
+        <details class="qa"><summary><span><span class="tag">OneDrive</span>Can I use Google Drive and OneDrive at the same time?</span></summary><div class="a"><p>One at a time. <b>Settings → Switch to …</b> changes which library you see. Each cloud keeps its own library, client ID and sign-in, so switching back is instant. Papers are not copied between clouds.</p></div></details>
+        <details class="qa"><summary><span><span class="tag">OneDrive</span>"Need admin approval" with a university or work Microsoft account?</span></summary><div class="a"><p>Your organisation only allows apps an admin has approved. Use a personal Microsoft account, or ask IT to approve your app registration. See <a href="https://github.com/prajwalsingh/paper-library/blob/main/docs/SETUP-ONEDRIVE.md#troubleshooting">OneDrive troubleshooting</a>.</p></div></details>
+        <details class="qa"><summary><span><span class="tag">OneDrive</span>Does "Delete forever" skip the OneDrive recycle bin?</span></summary><div class="a"><p>Paper Library asks OneDrive to delete permanently. Microsoft allows this for some account types only; if yours doesn't, you get a prompt with a button to open the OneDrive recycle bin and empty it yourself (otherwise OneDrive clears it after about 30 days).</p></div></details>
+        <details class="qa"><summary><span><span class="tag">General</span>Does it work offline?</span></summary><div class="a"><p>No. Files are read from and saved to your cloud.</p></div></details>
+        <details class="qa"><summary><span><span class="tag">General</span>What happens if I uninstall it?</span></summary><div class="a"><p>Nothing is lost. Your papers, folders and highlights are ordinary files in your cloud, and the highlights open in any PDF reader.</p></div></details>
+        <p id="faqEmpty" class="muted" hidden>No question matches. <a href="https://github.com/prajwalsingh/paper-library/issues">Ask on GitHub</a>.</p>
+      </div>
+
+      <h3 style="margin-top:36px">Limitations</h3>
+      <ul class="limits">
+        <li>Encrypted or password-protected PDFs open <b>read-only</b>.</li>
+        <li>Saving rewrites the PDF file, which <b>invalidates digital signatures</b>.</li>
+        <li>View-only Drive files can be highlighted, but have to be saved with <b>Menu → Save a copy to Drive</b>.</li>
+        <li>Only text highlights can be edited. Other annotations (ink, sticky notes) are shown and kept as they are.</li>
+        <li>Automatic details work best for papers with a DOI or arXiv ID. Others fall back to the PDF's own text; you can always fix them in the details panel.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ================= Releases ================= -->
+  <section id="releases" class="alt">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <div class="eyebrow">What's new</div>
+        <h2>Release history</h2>
+        <p>Installed a while ago? Compare with the version in <code>chrome://extensions</code>, then <a href="#updating">update</a>.</p>
+      </div>
+      <div class="timeline" id="timeline"></div>
+      <p style="margin-top:18px"><a href="https://github.com/prajwalsingh/paper-library/releases">All releases on GitHub →</a></p>
+    </div>
+  </section>
+</main>
+
+<footer id="thanks">
+  <div class="wrap">
+    <div class="thanks">
+      <div>
+        <div class="eyebrow">Acknowledgements</div>
+        <blockquote>
+          <p>Paper Library was built together with <b>Claude</b> (Anthropic's AI assistant), working in Claude Code.</p>
+          <p>I brought the idea and the direction: a reader that feels like a desktop PDF app, highlights that live inside the papers themselves, a Mendeley-style library made of plain cloud folders, and privacy you can verify rather than just trust. Claude turned those instructions into working code, tested every step, and explained each design decision along the way, so I learned how and why it all works while building it.</p>
+          <p>Thank you, Claude, for the patience, the careful testing, and for making a tool I wanted for my own research real, and good enough to share. 🙏<br>— <i>Prajwal Singh</i></p>
+        </blockquote>
+      </div>
+      <div>
+        <div class="eyebrow">Built on</div>
+        <p class="muted"><a href="https://mozilla.github.io/pdf.js/">PDF.js</a> (Mozilla, Apache-2.0), <a href="https://pdf-lib.js.org/">pdf-lib</a> (MIT), and the free bibliographic APIs of <a href="https://www.crossref.org/">Crossref</a> and <a href="https://arxiv.org/">arXiv</a>.</p>
+        <div class="eyebrow" style="margin-top:22px">For developers</div>
+        <p class="muted">A demo mode runs the viewer and library with a fake cloud, no account needed:</p>
+        <div class="copy-row"><code>python3 dev/serve.py</code><button class="copy-btn">Copy</button></div>
+        <p class="muted">Then open <code>http://127.0.0.1:8765/library.html</code>. See <a href="https://github.com/prajwalsingh/paper-library/blob/main/docs/DEVELOPMENT.md">DEVELOPMENT.md</a>.</p>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© Prajwal Singh · <a href="https://github.com/prajwalsingh/paper-library/blob/main/LICENSE">MIT License</a></span>
+      <span>Distributed only on <a href="https://github.com/prajwalsingh/paper-library">GitHub</a></span>
+    </div>
+  </div>
+</footer>
+
+<dialog id="lightbox"><img alt=""><p></p></dialog>
+
+<script>
+// ---- Releases: the one place to edit when a new version comes out (newest first). ----
+const REPO = 'https://github.com/prajwalsingh/paper-library';
+const RELEASES = [
+  { v: '2.2.0', date: '2026-11-16', title: 'Supplementary reading mode', points: [
+    'Attach supplementary files to a paper: PDFs, figures, CSV/TSV data, text, videos, anything.',
+    'Read them side by side with the paper; open several at once and resize each one.',
+    'Supplementary PDFs can be highlighted too. Works on Google Drive and OneDrive.' ] },
+  { v: '2.1.0', date: '2026-11-15', title: 'See which collections a paper is in', points: [
+    'Click any paper: the details panel lists its collections, and the sidebar highlights them.',
+    'Click a collection chip to jump there with the paper still selected.' ] },
+  { v: '2.0.0', date: '2026-11-15', title: 'Now with OneDrive', points: [
+    'Choose Google Drive or OneDrive (personal, work or school) and switch any time.',
+    'Delete forever and Empty Trash, on both clouds.',
+    'Microsoft sign-in with your own app registration (PKCE, no client secret).' ] },
+  { v: '1.3.0', date: '2026-11-15', title: 'Export highlights and notes', points: [
+    'Export a paper\u2019s highlights and notes as Markdown, from the viewer or the library.' ] },
+  { v: '1.2.0', date: '2026-11-14', title: 'First public release', points: [
+    'Desktop-style PDF reader with highlights saved inside the PDF on Google Drive.',
+    'Mendeley-style library made of plain Drive folders, with automatic paper details.' ] },
+];
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const fmtDate = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+// Version pill, timeline and "latest" mentions
+const latest = RELEASES[0];
+$('#versionPill b').textContent = 'v' + latest.v;
+$('#versionPill span').textContent = `Updated ${fmtDate(latest.date)}: ${latest.title}`;
+$$('.latest-v').forEach((e) => (e.textContent = 'v' + latest.v));
+$('#timeline').replaceChildren(...RELEASES.map((r, i) => {
+  const item = document.createElement('div');
+  item.className = 'rel reveal' + (i === 0 ? ' latest' : '');
+  const card = document.createElement('div');
+  card.className = 'card';
+  const h = document.createElement('h3');
+  h.append('v' + r.v + ' · ' + r.title);
+  if (i === 0) { const t = document.createElement('span'); t.className = 'new-tag'; t.textContent = 'Latest'; h.append(t); }
+  const date = document.createElement('div');
+  date.className = 'date';
+  date.textContent = fmtDate(r.date);
+  const ul = document.createElement('ul');
+  for (const p of r.points) { const li = document.createElement('li'); li.textContent = p; ul.append(li); }
+  const a = document.createElement('a');
+  a.href = `${REPO}/blob/main/docs/releases/v${r.v}.md`;
+  a.textContent = 'Release notes →';
+  card.append(h, date, ul, a);
+  item.append(card);
+  return item;
+}));
+
+// Theme: system → light → dark, remembered on this device only
+const THEMES = ['auto', 'light', 'dark'];
+let theme = 'auto';
+try { theme = localStorage.getItem('pl-theme') || 'auto'; } catch {}
+const darkNow = () => theme === 'dark' || (theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+function applyTheme() {
+  if (theme === 'auto') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.dataset.theme = theme;
+  $('#themeBtn use').setAttribute('href', { auto: '#i-auto', light: '#i-sun', dark: '#i-moon' }[theme]);
+  $('#themeBtn').title = 'Theme: ' + { auto: 'system', light: 'light', dark: 'dark' }[theme];
+  // Screenshots follow the theme
+  for (const img of $$('img.themed')) img.src = darkNow() ? img.dataset.dark : img.dataset.light;
+}
+$('#themeBtn').onclick = () => {
+  theme = THEMES[(THEMES.indexOf(theme) + 1) % 3];
+  try { localStorage.setItem('pl-theme', theme); } catch {}
+  applyTheme();
+};
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+applyTheme();
+
+// Mobile menu
+$('#menuBtn').onclick = () => {
+  const open = $('#nav').classList.toggle('open');
+  $('#menuBtn').setAttribute('aria-expanded', open);
+};
+$$('#nav a').forEach((a) => a.addEventListener('click', () => $('#nav').classList.remove('open')));
+
+// Feature tabs
+$$('.tabs button').forEach((b) => b.addEventListener('click', () => {
+  $$('.tabs button').forEach((x) => x.setAttribute('aria-selected', x === b));
+  $$('.feature-panel').forEach((p) => (p.hidden = p.dataset.panel !== b.dataset.tab));
+}));
+
+// Cloud switch (Install + How it works stay in sync)
+function setCloud(c) {
+  $$('.seg button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.cloud === c));
+  $$('.cloud-only').forEach((e) => (e.hidden = e.dataset.for !== c));
+  $$('.cloud-name').forEach((e) => (e.textContent = c === 'gdrive' ? 'Google Drive' : 'OneDrive'));
+  $('#metaWhere1').textContent = c === 'gdrive' ? 'hidden Drive file properties' : 'Paper Library/.paper-library.json';
+  $('#metaWhere2').textContent = c === 'gdrive' ? 'travel with the file' : 'keyed by each file’s OneDrive ID';
+}
+$$('.seg button').forEach((b) => b.addEventListener('click', () => setCloud(b.dataset.cloud)));
+
+// Copy buttons
+$$('.copy-btn').forEach((b) => b.addEventListener('click', async () => {
+  const text = b.previousElementSibling.textContent;
+  try { await navigator.clipboard.writeText(text); } catch {
+    const r = document.createRange(); r.selectNodeContents(b.previousElementSibling);
+    getSelection().removeAllRanges(); getSelection().addRange(r);
+  }
+  b.textContent = 'Copied'; b.classList.add('done');
+  setTimeout(() => { b.textContent = 'Copy'; b.classList.remove('done'); }, 1500);
+}));
+
+// Network-lock checker: the same list as connect-src in the extension's manifest.json
+const LOCK = ['www.googleapis.com', 'oauth2.googleapis.com', 'api.crossref.org', 'export.arxiv.org', 'graph.microsoft.com',
+  'login.microsoftonline.com', 'api.onedrive.com', '*.1drv.com', '*.sharepoint.com', '*.microsoftpersonalcontent.com'];
+function checkHost(raw) {
+  const v = $('#verdict');
+  let host = raw.trim().toLowerCase();
+  if (!host) { v.hidden = true; return; }
+  try { host = new URL(host.includes('://') ? host : 'https://' + host).hostname; } catch { host = host.split('/')[0]; }
+  const rule = LOCK.find((r) => (r.startsWith('*.') ? host.endsWith(r.slice(1)) && host.length > r.length - 1 : host === r));
+  v.hidden = false;
+  v.className = 'verdict ' + (rule ? 'ok' : 'no');
+  v.replaceChildren();
+  const main = document.createElement('div');
+  main.textContent = rule ? `✓ Allowed: ${host}` : `✕ Blocked by Chrome: ${host}`;
+  const small = document.createElement('small');
+  small.textContent = rule
+    ? `Matches “${rule}” in the extension's connect-src list.`
+    : 'Not in the list, so the request never leaves your computer.';
+  main.append(small);
+  v.append(main);
+}
+$('#hostInput').addEventListener('input', (e) => checkHost(e.target.value));
+$$('#hostChips button').forEach((b) => b.addEventListener('click', () => { $('#hostInput').value = b.textContent; checkHost(b.textContent); }));
+
+// FAQ search
+$('#faqSearch').addEventListener('input', (e) => {
+  const q = e.target.value.trim().toLowerCase();
+  let shown = 0;
+  for (const d of $$('#faqList details')) {
+    const hit = !q || d.textContent.toLowerCase().includes(q);
+    d.hidden = !hit;
+    if (hit) shown++;
+    if (q && hit) d.open = true;
+  }
+  $('#faqEmpty').hidden = shown > 0;
+});
+
+// Screenshot lightbox
+const lb = $('#lightbox');
+document.addEventListener('click', (e) => {
+  const img = e.target.closest('.shot-frame img');
+  if (img) { $('img', lb).src = img.currentSrc || img.src; $('img', lb).alt = img.alt; $('p', lb).textContent = img.alt; lb.showModal(); }
+  else if (e.target === lb || e.target.closest('#lightbox')) lb.close();
+});
+
+// Active section in the nav, and gentle reveal on scroll
+const links = new Map($$('#nav a').map((a) => [a.getAttribute('href').slice(1), a]));
+const spy = new IntersectionObserver((entries) => {
+  for (const en of entries) if (en.isIntersecting) {
+    links.forEach((a) => a.classList.remove('active'));
+    links.get(en.target.id)?.classList.add('active');
+  }
+}, { rootMargin: '-45% 0px -50% 0px' });
+$$('main section[id]').forEach((s) => spy.observe(s));
+const rev = new IntersectionObserver((entries) => {
+  for (const en of entries) if (en.isIntersecting) { en.target.classList.add('in'); rev.unobserve(en.target); }
+}, { rootMargin: '0px 0px -40px 0px' });
+$$('.reveal').forEach((e) => rev.observe(e));
+</script>
+</body>
+</html>

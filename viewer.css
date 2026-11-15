@@ -362,3 +362,8 @@ input[type='text']:focus, input[type='search']:focus { border-color: var(--accen
   #sidebar { z-index: 10; box-shadow: var(--pop-shadow); }
   #btnBack, #btnUndo, #btnRedo, .page-nav span { display: none; }
 }
+/* Very narrow: a supplementary PDF in the side panel of the supplementary reading page. */
+@media (max-width: 520px) {
+  .toolbar { gap: 4px; padding: 0 4px; }
+  #btnPrev, #btnNext, #btnZoomOut, #saveText { display: none; }
+}

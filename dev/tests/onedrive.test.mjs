@@ -68,7 +68,7 @@ async function graph(url, init = {}) {
   let target = relName ? child(baseId, relName) : items.get(baseId);
   if (op === '/permanentDelete') {
     if (globalThis.NO_PERMANENT) return J(400, { error: { code: 'invalidRequest', message: 'not supported' } });
-    recycleBin.delete(target.id); items.delete(target.id); return new Response(null, { status: 204 });
+    const purge = (id) => { for (const k of kids(id)) purge(k.id); recycleBin.delete(id); items.delete(id); }; purge(target.id); return new Response(null, { status: 204 });
   }
   if (op === '/children' && method === 'GET') return J(200, { value: kids(baseId).map(out) });
   if (op === '/children' && method === 'POST') {
@@ -274,6 +274,51 @@ assert.equal(res.recycleBinUrl, 'https://onedrive.live.com/?v=recyclebin');
 assert.ok(recycleBin.has(gone2.id), 'fell back to the recycle bin');
 lib = await od.loadLibrary();
 assert.ok(!lib.trashed.some((x) => [gone1.id, gone2.id].includes(x.id)), 'gone from Trash');
+
+// supplementary files: one folder per paper inside "Supplementary", never shown as a collection
+const mine = await od.createFolder('Supplementary', rootId); // the user's own collection with that name stays theirs
+const host = await od.uploadPdf(blob(800), 'host.pdf', rootId, {});
+const hostPaper = { ...host, meta: { title: 'Muscle degeneration: a single-cell atlas', authors: ['Ng, Ann', 'Li, Bo'], year: 2025 } };
+assert.equal(await od.suppCount({ id: host.id }), 0);
+assert.deepEqual(await od.listSupplementary(host.id), [], 'no folder yet: empty, nothing created');
+let sr = await od.uploadSupplementary(hostPaper, new File(['gene,count\nMYOD1,12\n'], 'Data S2.csv', { type: 'text/csv' }));
+assert.equal(sr.count, 1);
+assert.equal(sr.file.name, 'Data S2.csv');
+const movie = await od.uploadSupplementary(hostPaper, new File([new Uint8Array(5 * 1024 * 1024).fill(3)], 'Movie S1.mp4', { type: 'video/mp4' }), (l, t) => { progress = l / t; });
+assert.equal(movie.count, 2);
+assert.equal(movie.file.size, 5 * 1024 * 1024, 'large file via upload session');
+const si = await od.uploadSupplementary(hostPaper, new File([new Uint8Array(300)], 'SI.pdf', { type: 'application/pdf' }));
+const again = await od.uploadSupplementary(hostPaper, new File(['x'], 'Data S2.csv', { type: 'text/csv' }));
+assert.equal(again.file.name, 'Data S2 1.csv', 'name clash renamed');
+assert.equal(again.count, 4);
+const suppRoot = items.get(JSON.parse(child(rootId, '.paper-library.json').content.toString()).suppRoot);
+assert.equal(suppRoot.name, 'Supplementary 1', 'did not take over the user’s own “Supplementary” collection');
+const hostFolder = kids(suppRoot.id)[0];
+assert.equal(hostFolder.name, 'Muscle degeneration a single-cell atlas – Ng 2025', 'readable name, no “:”');
+let sl = await od.listSupplementary(host.id);
+assert.deepEqual(sl.map((f) => f.name), ['Data S2 1.csv', 'Data S2.csv', 'Movie S1.mp4', 'SI.pdf']);
+lib = await od.loadLibrary();
+assert.ok(lib.folders.some((f) => f.id === mine.id), 'user collection still listed');
+assert.ok(!lib.folders.some((f) => f.id === suppRoot.id || f.id === hostFolder.id), 'supplementary folders are not collections');
+assert.ok(!lib.papers.some((x) => x.id === si.file.id), 'a supplementary PDF is not a library paper');
+assert.equal(lib.papers.find((x) => x.id === host.id).suppCount, 4);
+assert.equal(await od.suppCount({ id: host.id }), 4);
+await od.renameSupplementary(again.file.id, 'Data S3.csv');
+assert.equal(items.get(again.file.id).name, 'Data S3.csv');
+assert.equal(await od.deleteSupplementary(host.id, again.file.id), 3);
+assert.ok(recycleBin.has(again.file.id), 'removed file goes to the recycle bin');
+mk('Added in OneDrive.txt', hostFolder.id, false, Buffer.from('hi')); // added outside Paper Library
+sl = await od.listSupplementary(host.id, 3);
+assert.equal(sl.length, 4);
+assert.equal(await od.suppCount({ id: host.id }), 4, 'badge count corrected from the real folder');
+// trash keeps them; delete forever removes the folder too
+await od.trashItem(host.id);
+lib = await od.loadLibrary();
+assert.equal(lib.trashed.find((x) => x.id === host.id).suppCount, 4);
+assert.ok(items.has(hostFolder.id), 'trash keeps supplementary files');
+await od.deleteForever(host.id);
+assert.ok(!items.has(hostFolder.id) && !items.has(si.file.id), 'delete forever removes its supplementary files');
+assert.ok(items.has(suppRoot.id), 'the Supplementary folder itself stays');
 
 // a full OneDrive gives a clear message with the numbers
 globalThis.FULL = true;

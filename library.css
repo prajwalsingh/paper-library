@@ -146,6 +146,30 @@ button.chip:hover { background: color-mix(in srgb, var(--accent) 22%, transparen
 .det-colls .chips { margin: 4px 0 0; }
 .det-colls #dCollsHint { margin-top: 4px; }
 .small { font-size: 12px; }
+
+/* Supplementary files (details panel) and the 📎 badge in the table */
+.det-supp { display: flex; flex-direction: column; gap: 6px; border-radius: 8px; }
+.det-supp.drop-hover { outline: 2px dashed var(--accent); outline-offset: 4px; }
+.det-supp-head { display: flex; align-items: center; justify-content: space-between; }
+.supp-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.supp-list li { display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: 6px; font-size: 13px; }
+.supp-list li:hover { background: var(--btn-hover); }
+.supp-list .s-kind { flex: none; width: 34px; font-size: 10px; font-weight: 700; text-align: center; color: var(--muted); border: 1px solid var(--border); border-radius: 4px; padding: 1px 0; text-transform: uppercase; }
+.supp-list .s-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.supp-list .s-name:hover { color: var(--accent); text-decoration: underline; }
+.supp-list .s-size { flex: none; color: var(--muted); font-size: 11px; }
+.supp-list .tb-btn { width: 24px; height: 24px; min-width: 0; padding: 0; opacity: 0; }
+.supp-list li:hover .tb-btn, .supp-list .tb-btn:focus-visible { opacity: 1; }
+.supp-list .tb-btn svg { width: 13px; height: 13px; }
+.supp-list li.uploading { color: var(--muted); font-style: italic; }
+#dSuppOpen { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; }
+#dSuppOpen svg { width: 16px; height: 16px; }
+.supp-badge {
+  display: inline-flex; align-items: center; gap: 2px; margin-right: 6px; padding: 0 6px; height: 20px; vertical-align: middle;
+  border: none; border-radius: 999px; background: var(--btn-active); color: var(--muted); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer;
+}
+.supp-badge:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--fg); }
+.supp-badge svg { width: 12px; height: 12px; }
 .grow { flex: 1; }
 
 /* ---------- Background tasks ---------- */

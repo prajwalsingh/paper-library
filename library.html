@@ -32,6 +32,9 @@
     <symbol id="i-refresh" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M13 8a5 5 0 1 1-1.5-3.6M13 3v2.5h-2.5"/></symbol>
     <symbol id="i-gear" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.2" fill="none" stroke="currentColor" stroke-width="1.4"/><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M3.6 12.4l1.2-1.2M11.2 4.8l1.2-1.2"/></symbol>
     <symbol id="i-pdf" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" d="M3.5 1.5h6l3 3v6"/><path fill="none" stroke="currentColor" stroke-width="1.3" d="M9.5 1.5v3h3M3.5 1.5v13h5"/><circle cx="12" cy="12.5" r="2.6" fill="none" stroke="currentColor" stroke-width="1.2"/><path stroke="currentColor" stroke-width="1.2" stroke-linecap="round" d="M12 11.3v2.4M10.8 12.5h2.4"/></symbol>
+    <symbol id="i-clip" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" d="M13 7.5 8.2 12.3a3.2 3.2 0 0 1-4.5-4.5l5-5a2.1 2.1 0 0 1 3 3l-5 5a1 1 0 0 1-1.5-1.5L9.8 4.7"/></symbol>
+    <symbol id="i-split" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path stroke="currentColor" stroke-width="1.3" d="M8 2.5v11"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" d="M10.5 2.5 13.5 5.5 6 13H3v-3z"/></symbol>
     <symbol id="i-more" viewBox="0 0 16 16"><circle cx="3.5" cy="8" r="1.2" fill="currentColor"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/><circle cx="12.5" cy="8" r="1.2" fill="currentColor"/></symbol>
     <symbol id="i-close" viewBox="0 0 16 16"><path stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="m4 4 8 8M12 4l-8 8"/></symbol>
     <symbol id="i-check" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="m3 8.5 3.2 3L13 4.5"/></symbol>
@@ -149,6 +152,17 @@
             <button data-cloud id="dDrive" class="btn">Show in Drive</button>
             <button id="dExport" class="btn" title="Download this paper's highlights and notes as a Markdown file">Export highlights</button>
           </div>
+        </div>
+        <hr>
+        <div id="dSupp" class="det-supp">
+          <div class="det-supp-head">
+            <span class="small muted">Supplementary files</span>
+            <button id="dSuppAdd" class="link-btn" title="Add figures, data tables, methods, videos… that belong to this paper">+ Add files</button>
+          </div>
+          <ul id="dSuppList" class="supp-list"></ul>
+          <div id="dSuppNote" class="small muted"></div>
+          <button id="dSuppOpen" class="btn primary" hidden><svg><use href="#i-split"/></svg><span></span></button>
+          <input id="dSuppInput" type="file" multiple hidden>
         </div>
       </div>
     </aside>

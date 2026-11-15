@@ -20,8 +20,12 @@
 //     OneDrive's own recycle bin for personal accounts).
 //   * A paper in a second collection: OneDrive has no shortcuts, so the extra
 //     collection is remembered in the JSON file.
+//   * Supplementary files sit in Paper Library/Supplementary/<paper name>/.
+//     The index remembers that folder's ID (suppRoot, never shown as a
+//     collection) and, per paper, its folder and file count: supp: { folder, n }.
 
 import { getToken, invalidateToken, AuthError } from './ms-auth.js';
+import { suppFolderName } from './supplementary.js';
 
 export const GRAPH = 'https://graph.microsoft.com/v1.0';
 const ROOT_NAME = 'Paper Library';
@@ -368,6 +372,7 @@ function toPaper(it, e) {
     collections: [parentId, ...also].filter(Boolean),
     shortcuts: also.map((f) => ({ id: shortcutId(it.id, f), parentId: f })),
     meta: detailsOf(e),
+    suppCount: e?.supp?.n || 0,
     webViewLink: it.webUrl,
   };
 }
@@ -395,7 +400,7 @@ export async function loadLibrary() {
             trashId = it.id;
             continue;
           }
-          if (hidden(it)) continue;
+          if (hidden(it) || it.id === index.data.suppRoot) continue; // supplementary files are not a collection
           folders.push({ id: it.id, name: it.name, parentId: it.parentReference?.id });
           kinds.set(it.id, 'folder');
           next.push(it.id);
@@ -490,23 +495,31 @@ export async function restoreItem(id) {
  * by OneDrive after 30 days), and we report that honestly.
  */
 export async function deleteForever(id) {
-  let permanent = true;
-  try {
-    await authedFetch(`/me/drive/items/${enc(id)}/permanentDelete`, { method: 'POST' });
-  } catch (e) {
-    if (e instanceof AuthError) throw e;
-    permanent = false;
-    try {
-      await authedFetch(`/me/drive/items/${enc(id)}`, { method: 'DELETE' });
-    } catch (e2) {
-      if (e2.status !== 404) throw e2; // 404: already gone
-    }
-  }
+  if (!index) await readIndex();
+  const suppId = index.data.papers[id]?.supp?.folder;
+  let permanent = await removeItem(id);
+  if (suppId) permanent = (await removeItem(suppId).catch(() => true)) && permanent; // with its files
   kinds.delete(id);
   await updateIndex((d) => {
     delete d.papers[id];
   });
   return { permanent, recycleBinUrl: permanent ? null : recycleBinUrl() };
+}
+
+/** permanentDelete, or the recycle bin if OneDrive refuses. Returns whether it was permanent. */
+async function removeItem(id) {
+  try {
+    await authedFetch(`/me/drive/items/${enc(id)}/permanentDelete`, { method: 'POST' });
+    return true;
+  } catch (e) {
+    if (e instanceof AuthError) throw e;
+    try {
+      await authedFetch(`/me/drive/items/${enc(id)}`, { method: 'DELETE' });
+    } catch (e2) {
+      if (e2.status !== 404) throw e2; // 404: already gone
+    }
+    return false;
+  }
 }
 
 /** Where the user empties OneDrive's recycle bin (personal vs work/school OneDrive). */
@@ -594,4 +607,100 @@ export async function pdfSource(id) {
 export function parseDriveId(text) {
   const t = (text || '').trim();
   return /^[\w!.-]{10,}$/.test(t) ? t : null;
+}
+
+// ---------------------------------------------------------------------------
+// Supplementary files
+// ---------------------------------------------------------------------------
+
+/** Number of supplementary files, for the viewer's "Open with supplementary" item. */
+export async function suppCount(meta) {
+  if (!index) await readIndex();
+  return index.data.papers[meta.id]?.supp?.n || 0;
+}
+
+const exists = async (id) => {
+  try {
+    return !!(await getItem(id)).folder;
+  } catch (e) {
+    if (e.status === 404) return false;
+    throw e;
+  }
+};
+
+/** The paper's own folder ID (null if none); created when `paper` is given. */
+async function suppFolder(paperId, paper = null) {
+  if (!index) await readIndex();
+  const known = index.data.papers[paperId]?.supp?.folder;
+  if (known && (await exists(known))) return known;
+  if (!paper) return null;
+  const r = await ensureRoot();
+  let rootId = index.data.suppRoot;
+  if (!rootId || !(await exists(rootId))) {
+    rootId = (await json(`/me/drive/items/${enc(r.id)}/children`, jsonBody('POST', { name: 'Supplementary', folder: {}, '@microsoft.graph.conflictBehavior': 'rename' }))).id;
+    await updateIndex((d) => {
+      d.suppRoot = rootId;
+    });
+  }
+  const it = await json(`/me/drive/items/${enc(rootId)}/children`, jsonBody('POST', { name: suppFolderName(paper), folder: {}, '@microsoft.graph.conflictBehavior': 'rename' }));
+  await updateIndex((d) => {
+    entry(d, paperId).supp = { folder: it.id, n: 0 };
+  });
+  return it.id;
+}
+
+const toSupp = (it) => ({ id: it.id, name: it.name, mimeType: it.file?.mimeType || '', size: Number(it.size) || 0, modified: it.lastModifiedDateTime, webViewLink: it.webUrl });
+const byName = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+
+/**
+ * The paper's supplementary files, sorted by name ("File S2" before "File S10").
+ * If `knownCount` differs (files added or removed in OneDrive itself), the badge count is corrected.
+ */
+export async function listSupplementary(paperId, knownCount = null) {
+  const folder = await suppFolder(paperId);
+  const files = folder ? (await children(folder)).filter((it) => it.file).map(toSupp).sort(byName) : [];
+  if (knownCount != null && knownCount !== files.length) await setCount(paperId, files.length).catch(() => {});
+  return files;
+}
+
+const setCount = (paperId, n) =>
+  updateIndex((d) => {
+    const e = entry(d, paperId);
+    if (e.supp) e.supp.n = n;
+  });
+
+async function recount(paperId) {
+  const n = (await listSupplementary(paperId)).length;
+  await setCount(paperId, n);
+  return n;
+}
+
+/** Uploads one file (any type) to the paper's folder. Returns { file, count }. */
+export async function uploadSupplementary(paper, file, onProgress) {
+  const folder = await suppFolder(paper.id, paper);
+  const it = file.size <= SIMPLE_UPLOAD_MAX // small (or empty) files in one request
+    ? await json(`/me/drive/items/${enc(folder)}:/${enc(file.name)}:/content?@microsoft.graph.conflictBehavior=rename`, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+        body: file,
+      })
+    : await uploadSession(
+    `/me/drive/items/${enc(folder)}:/${enc(file.name)}:/createUploadSession`,
+    { item: { '@microsoft.graph.conflictBehavior': 'rename' } },
+    file,
+    onProgress
+  );
+  return { file: toSupp(it), count: await recount(paper.id) };
+}
+
+export const renameSupplementary = (fileId, name) => renameItem(fileId, name);
+
+/** Moves the file to OneDrive's recycle bin (restorable there). Returns the new count. */
+export async function deleteSupplementary(paperId, fileId) {
+  try {
+    await authedFetch(`/me/drive/items/${enc(fileId)}`, { method: 'DELETE' });
+  } catch (e) {
+    if (e.status !== 404) throw e;
+  }
+  return recount(paperId);
 }

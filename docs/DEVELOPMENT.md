@@ -14,15 +14,17 @@ python3 dev/serve.py
 ```
 
 - Library: <http://127.0.0.1:8765/library.html>
+- Supplementary reading mode: <http://127.0.0.1:8765/supp.html?id=mock0008> (the Brain2Image paper has made-up supplementary files)
 - Viewer: <http://127.0.0.1:8765/viewer.html?src=/sample.pdf> (`/sample.pdf` is `docs/demo-paper.pdf`, or pass another PDF: `python3 dev/serve.py path/to.pdf`)
 
 Add `?p=onedrive` to either URL to see the OneDrive wording (the data is still the fake one;
 the OneDrive code itself needs a real Microsoft account, see `docs/SETUP-ONEDRIVE.md`).
 
-Automated tests for the OneDrive code (fake Microsoft Graph and fake sign-in, no account needed):
+Automated tests for the cloud code (fake Microsoft Graph, fake Drive API and fake sign-in, no account needed):
 
 ```bash
 node dev/tests/onedrive.test.mjs
+node dev/tests/drive.test.mjs
 node dev/tests/ms-auth.test.mjs
 ```
 
@@ -39,6 +41,8 @@ allow cross-site requests. The installed extension is allowed to make them.
 | `content.js`, `content.css` | "Open in Paper Library" button on drive.google.com |
 | `viewer.html` / `.css` / `.js` | PDF viewer and highlighter (PDF.js viewer components, overlay, saving) |
 | `library.html` / `.css` / `.js` | Paper Library UI (collections, table, details, uploads, background tasks) |
+| `supp.html` / `.css` / `.js` | Supplementary reading mode: the paper (viewer in a frame) beside an accordion of its supplementary files |
+| `js/supplementary.js` | Shared helpers for supplementary files: how each file type is shown, readable folder names |
 | `js/auth.js` | Google sign-in with `chrome.identity.launchWebAuthFlow`, token cache |
 | `js/drive.js` | Drive REST calls: download, update content in place, metadata |
 | `js/library-drive.js` | Library ↔ Drive mapping: root folder, folder tree, properties (chunked), shortcuts, resumable upload |
@@ -61,7 +65,7 @@ allow cross-site requests. The installed extension is allowed to make them.
 
 ```bash
 python3 dev/serve.py &               # demo server
-node dev/take-screenshots.mjs        # README screenshots (1440×860 @1.5x)
+node dev/take-screenshots.mjs        # README and website screenshots (1440×860 @1.5x)
 ```
 
 It drives headless Google Chrome through the DevTools Protocol, so no npm
@@ -73,7 +77,10 @@ paper, edit and run `node dev/make-demo-pdf.mjs`.
 1. Bump `"version"` in `manifest.json`.
 2. Run `python3 scripts/audit.py --libs` and check that it reports no unexpected hosts and identical libraries.
 3. `./scripts/package.sh` builds `dist/paper-library-v<version>.zip`, which contains only the files the extension needs, plus `…zip.sha256`.
-4. Create a GitHub release with tag `v<version>`, attach **both** files, and list the changes.
+4. Write `docs/releases/v<version>.md`, update the **Latest version** banner at the top of `README.md`,
+   and add the version at the top of `RELEASES` in `docs/index.html` (the website's version pill and
+   release history are built from that list).
+5. Create a GitHub release with tag `v<version>`, attach **both** files, and list the changes.
 
 Distribution is GitHub only (see [SECURITY.md](SECURITY.md)). Don't publish builds anywhere else.
 
@@ -81,9 +88,24 @@ Distribution is GitHub only (see [SECURITY.md](SECURITY.md)). Don't publish buil
 
 `manifest.json` → `content_security_policy.extension_pages` lists the only hosts the
 extension may contact (`connect-src`). If a new feature needs another service, add it
-there **and** to the tables in `README.md`, `docs/SECURITY.md` and `docs/PRIVACY.md`.
+there **and** to `docs/SECURITY.md`, `docs/PRIVACY.md` and the website (`docs/index.html`: the
+privacy table and the `LOCK` list used by its "Try the lock" checker).
 `dev/serve.py` sends the same policy, so demo mode breaks in the same way the
 extension would if something isn't allowed.
+
+## The website
+
+<https://prajwalsingh.github.io/paper-library/> is GitHub Pages serving the `docs/` folder of `main`.
+The page is one self-contained file, `docs/index.html` (inline CSS and JS, its own Content Security
+Policy, no fonts, scripts or analytics from other sites), plus `docs/assets/` and `docs/screenshots/`.
+`docs/.nojekyll` tells Pages to serve the files as they are. Links to the Markdown docs point to
+github.com so they render nicely.
+
+Preview it locally:
+
+```bash
+python3 -m http.server 8790 --directory docs   # then open http://127.0.0.1:8790/
+```
 
 ## Updating the bundled libraries
 

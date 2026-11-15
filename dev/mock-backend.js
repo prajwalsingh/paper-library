@@ -19,7 +19,7 @@ function paper(parentId, title, authors, year, source, extra = {}) {
   const p = {
     id: id(), name: (extra.name || title.slice(0, 40)) + '.pdf', size: 900000 + n * 1000, md5: 'md5-' + n,
     created: daysAgo(extra.added ?? 10 + n * 5), modified: daysAgo(1), starred: !!extra.starred,
-    parentId, collections: [parentId], shortcuts: [], webViewLink: '#',
+    parentId, collections: [parentId], shortcuts: [], webViewLink: '#', suppCount: 0,
     meta: { title, authors, year, source, doi: null, arxivId: null, status: extra.status ?? 'auto', lastRead: extra.read != null ? daysAgo(extra.read) : null },
   };
   if (extra.status === null) Object.assign(p.meta, { title: '', authors: [], year: null, source: '' });
@@ -35,7 +35,7 @@ const rep = folder('Representation Learning');
 const diff = folder('Diffusion Models');
 const adv = folder('Adversarial Learning');
 
-paper(b2i.id, 'Brain2Image: Converting brain signals into images', ['Kavasidis, Isaak', 'Palazzo, Simone', 'Spampinato, Concetto', 'Giordano, Daniela', 'Shah, Mubarak'], 2017, 'Proceedings of the 25th ACM International Conference on Multimedia', { starred: true, read: 2 });
+const b2iPaper = paper(b2i.id, 'Brain2Image: Converting brain signals into images', ['Kavasidis, Isaak', 'Palazzo, Simone', 'Spampinato, Concetto', 'Giordano, Daniela', 'Shah, Mubarak'], 2017, 'Proceedings of the 25th ACM International Conference on Multimedia', { starred: true, read: 2 });
 paper(b2i.id, 'Generative Adversarial Networks Conditioned by Brain Signals', ['Palazzo, Simone', 'Spampinato, Concetto', 'Kavasidis, Isaak', 'Giordano, Daniela', 'Shah, Mubarak'], 2017, 'IEEE International Conference on Computer Vision (ICCV)');
 paper(b2i.id, 'Deep learning human mind for automated visual classification', ['Spampinato, Concetto', 'Palazzo, Simone', 'Kavasidis, Isaak'], 2017, 'IEEE Conference on Computer Vision and Pattern Recognition (CVPR)', { read: 9 });
 paper(b2i.id, 'ThoughtViz: Visualizing human thoughts using generative adversarial network', ['Tirupattur, Praveen', 'Rawat, Yogesh Singh', 'Spampinato, Concetto', 'Shah, Mubarak'], 2018, 'Proceedings of the 26th ACM International Conference on Multimedia');
@@ -53,6 +53,39 @@ paper(adv.id, 'Adversarial Examples that Fool both Computer Vision and Time-Limi
 paper(adv.id, 'Explaining and Harnessing Adversarial Examples', ['Goodfellow, Ian J.', 'Shlens, Jonathon', 'Szegedy, Christian'], 2015, 'International Conference on Learning Representations (ICLR)', { read: 20 });
 paper('root', 'Reading Papers Where They Live: Highlighting PDFs Directly in Google Drive', ['Example, Ada', 'Sample, Ben'], 2026, 'Demo document (docs/demo-paper.pdf)', { name: 'Reading Papers Where They Live', added: 0 });
 
+// Supplementary files of the Brain2Image paper (made up, so demo mode shows every kind).
+const supp = new Map(); // paperId → [{ id, name, mimeType, size, modified, webViewLink }]
+function addSupp(paperId, name, mimeType, content) {
+  const f = { id: id(), name, mimeType, size: content?.size || 0, modified: daysAgo(3), webViewLink: '#' };
+  if (content) blobs.set(f.id, content);
+  if (!supp.has(paperId)) supp.set(paperId, []);
+  supp.get(paperId).push(f);
+  papers.find((p) => p.id === paperId).suppCount = supp.get(paperId).length;
+}
+{
+  const bars = [['Pixel', 0.62], ['Brain2Image', 0.83], ['Real', 0.91]];
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 260" font-family="sans-serif">
+<rect width="420" height="260" fill="#fff"/><text x="210" y="26" text-anchor="middle" font-size="15" font-weight="bold">Figure S1. Inception score by method</text>
+${bars.map(([n, v], k) => `<rect x="${70 + k * 110}" y="${230 - v * 180}" width="70" height="${v * 180}" fill="${['#99c1f1', '#3584e4', '#1a5fb4'][k]}"/><text x="${105 + k * 110}" y="248" text-anchor="middle" font-size="12">${n}</text><text x="${105 + k * 110}" y="${222 - v * 180}" text-anchor="middle" font-size="12">${v.toFixed(2)}</text>`).join('')}
+<line x1="50" y1="230" x2="400" y2="230" stroke="#333"/></svg>`;
+  const rows = ['trial,subject,class,channel_O1_uV,channel_O2_uV,predicted,correct'];
+  const classes = ['dog', 'cat', 'piano', 'airliner', 'mushroom', 'pizza'];
+  for (let t = 1; t <= 60; t++) {
+    const c = classes[t % 6];
+    const ok = t % 7 !== 0;
+    rows.push([t, 1 + (t % 6), c, (12 + Math.sin(t) * 5).toFixed(2), (10 + Math.cos(t) * 4).toFixed(2), ok ? c : classes[(t + 1) % 6], ok].join(','));
+  }
+  addSupp(b2iPaper.id, 'Supplementary Information.pdf', 'application/pdf', null);
+  addSupp(b2iPaper.id, 'Figure S1 – Inception scores.svg', 'image/svg+xml', new Blob([svg], { type: 'image/svg+xml' }));
+  addSupp(b2iPaper.id, 'Data S2 – EEG classification trials.csv', 'text/csv', new Blob([rows.join('\n')], { type: 'text/csv' }));
+  addSupp(b2iPaper.id, 'Methods S3 – EEG preprocessing.txt', 'text/plain', new Blob([
+    'Supplementary Methods\n\n1. Recording\nEEG was recorded with 128 channels at 1 kHz while subjects viewed ImageNet images for 0.5 s each.\n\n' +
+    '2. Preprocessing\nBand-pass filter 14–71 Hz; notch at 50 Hz; trials with amplitude above 100 µV rejected.\n\n' +
+    '3. Encoder\nLSTM, 128 hidden units, trained with cross-entropy on 40 classes.\n'], { type: 'text/plain' }));
+  addSupp(b2iPaper.id, 'Table S4 – Hyperparameters.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', new Blob(['PK'], { type: 'application/octet-stream' }));
+  supp.get(b2iPaper.id)[0].size = 412000; // the PDF's bytes come from /sample.pdf
+}
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const find = (i) => papers.find((p) => p.id === i) || folders.find((f) => f.id === i);
 const clone = (x) => structuredClone(x);
@@ -65,7 +98,7 @@ export async function loadLibrary() {
 export async function createFolder(name, parentId) { await sleep(100); return clone(folder(name, parentId)); }
 export async function renameItem(i, name) { find(i).name = name; }
 export async function trashItem(i) { const x = find(i); if (x) x.trashed = true; }
-export async function deleteForever(i) { const k = papers.findIndex((p) => p.id === i); if (k >= 0) papers.splice(k, 1); await sleep(80); return { permanent: true }; }
+export async function deleteForever(i) { const k = papers.findIndex((p) => p.id === i); if (k >= 0) papers.splice(k, 1); supp.delete(i); await sleep(80); return { permanent: true }; }
 export async function restoreItem(i) { const x = find(i); if (x) x.trashed = false; }
 export async function setStarred(i, s) { find(i).starred = s; }
 export async function moveItem(i, from, to) {
@@ -87,4 +120,30 @@ export async function uploadPdf(blob, name, parentId, props, onProgress) {
 }
 export async function pdfSource(i) {
   return blobs.has(i) ? { data: new Uint8Array(await blobs.get(i).arrayBuffer()) } : { url: '/sample.pdf' };
+}
+
+// Supplementary files
+export async function suppCount(meta) { return supp.get(meta.id)?.length || 0; }
+export async function listSupplementary(paperId) {
+  await sleep(150);
+  return clone((supp.get(paperId) || []).slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })));
+}
+export async function uploadSupplementary(paper, file, onProgress) {
+  for (let k = 1; k <= 4; k++) { await sleep(80); onProgress?.((k * file.size) / 4, file.size); }
+  addSupp(paper.id, file.name, file.type, file);
+  return { file: clone(supp.get(paper.id).at(-1)), count: supp.get(paper.id).length };
+}
+export async function renameSupplementary(fileId, name) {
+  for (const list of supp.values()) for (const f of list) if (f.id === fileId) f.name = name;
+}
+export async function deleteSupplementary(paperId, fileId) {
+  const list = (supp.get(paperId) || []).filter((f) => f.id !== fileId);
+  supp.set(paperId, list);
+  return list.length;
+}
+/** File bytes (the viewer module's download, for the supplementary page). */
+export async function download(fileId) {
+  const b = blobs.get(fileId);
+  if (b) return new Uint8Array(await b.arrayBuffer());
+  return new Uint8Array(await (await fetch('/sample.pdf')).arrayBuffer());
 }

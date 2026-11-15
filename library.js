@@ -11,6 +11,7 @@
 import * as pdfjsLib from './lib/pdfjs/pdf.min.mjs';
 import { getProviderId, setProviderId, loadProvider, relabel } from './js/provider.js';
 import { readHighlights, buildMarkdown, markdownFileName, downloadText } from './js/export.js';
+import { fileKind, fmtSize } from './js/supplementary.js';
 
 const IN_EXTENSION = typeof chrome !== 'undefined' && !!chrome.runtime?.id;
 // The cloud chosen in Settings (Google Drive or OneDrive, see js/provider.js).
@@ -508,6 +509,13 @@ function rowFor(p, dupFirst) {
     tdTitle.textContent = displayTitle(p);
     if (!p.meta.title) tdTitle.classList.add('pending');
   }
+  if (p.suppCount > 0 && ui.view !== 'trash') {
+    const b = el('button', 'supp-badge');
+    b.dataset.supp = '1';
+    b.title = `${p.suppCount} supplementary file${p.suppCount > 1 ? 's' : ''}: open side by side with the paper`;
+    b.append(icon('clip'), document.createTextNode(String(p.suppCount)));
+    tdTitle.prepend(b); // before the title, so a long title can't push it out of sight
+  }
   tdTitle.title = displayTitle(p);
   const tdSource = el('td', 'c-source', p.meta.source || '');
   tdSource.title = p.meta.source || '';
@@ -601,6 +609,7 @@ function renderDetails() {
   renderPaperCollections(p);
   const isTrash = lib.trashed.has(p.id);
   for (const id of ['dSave', 'dLookup', 'dOpen']) $(id).disabled = isTrash;
+  renderSupp(p);
 }
 
 // The collections a paper belongs to: chips in the details panel (click one to
@@ -659,6 +668,142 @@ function markSelectedCollections() {
 }
 
 // ---------------------------------------------------------------------------
+// Supplementary files of the paper in the details panel
+// ---------------------------------------------------------------------------
+const supp = {
+  lists: new Map(), // paperId → [file] (read once per session, refreshed after changes)
+  loading: new Set(),
+  uploads: new Map(), // paperId → [{ name, progress }]
+};
+const KIND_LABEL = { pdf: 'PDF', image: 'IMG', video: 'VID', table: 'DATA', text: 'TXT', other: '' };
+
+async function loadSupp(p) {
+  if (supp.loading.has(p.id)) return;
+  supp.loading.add(p.id);
+  try {
+    const files = await backend.listSupplementary(p.id, p.suppCount ?? 0);
+    supp.lists.set(p.id, files);
+    if (p.suppCount !== files.length) {
+      p.suppCount = files.length; // the backend has corrected its stored count too
+      renderSoon();
+    }
+  } catch (e) {
+    supp.lists.set(p.id, { error: e.message || String(e) });
+  } finally {
+    supp.loading.delete(p.id);
+    if (ui.selectedId === p.id) renderSupp(p);
+  }
+}
+
+function renderSupp(p) {
+  const isTrash = lib.trashed.has(p.id);
+  $('dSupp').hidden = isTrash;
+  if (isTrash) return;
+  if (!supp.lists.has(p.id)) loadSupp(p);
+  const files = supp.lists.get(p.id);
+  const ups = supp.uploads.get(p.id) || [];
+  const list = $('dSuppList');
+  list.replaceChildren();
+  for (const f of Array.isArray(files) ? files : []) {
+    const li = el('li');
+    li.dataset.file = f.id;
+    const kind = fileKind(f.name, f.mimeType);
+    const k = el('span', 's-kind', KIND_LABEL[kind] || (f.name.match(/\.([a-z0-9]{1,4})$/i)?.[1] || 'FILE'));
+    const name = el('span', 's-name', f.name);
+    name.dataset.openFile = f.id;
+    name.title = `${f.name}\nClick to open it next to the paper`;
+    const ren = el('button', 'tb-btn');
+    ren.dataset.rename = f.id;
+    ren.title = 'Rename';
+    ren.append(icon('pencil'));
+    const del = el('button', 'tb-btn');
+    del.dataset.remove = f.id;
+    del.title = 'Remove from this paper';
+    del.append(icon('close'));
+    li.append(k, name, el('span', 's-size', fmtSize(f.size)), ren, del);
+    list.append(li);
+  }
+  for (const u of ups) list.append(el('li', 'uploading', `Uploading ${u.name}… ${Math.round(u.progress * 100)}%`));
+  const n = Array.isArray(files) ? files.length : 0;
+  $('dSuppNote').textContent = !files
+    ? 'Loading…'
+    : files.error
+      ? 'Could not load supplementary files: ' + files.error
+      : n || ups.length
+        ? ''
+        : 'None yet. Add figures, data tables, methods or videos that belong to this paper (or drop files here). You can then read them side by side with the paper.';
+  const open = $('dSuppOpen');
+  open.hidden = !n;
+  open.querySelector('span').textContent = `Open with supplementary (${n})`;
+}
+
+async function addSuppFiles(p, fileList) {
+  const files = [...fileList];
+  if (!files.length) return;
+  const ups = supp.uploads.get(p.id) || [];
+  supp.uploads.set(p.id, ups);
+  const jobs = files.map((f) => ({ name: f.name, progress: 0, file: f }));
+  ups.push(...jobs);
+  renderSupp(p);
+  let added = 0;
+  for (const job of jobs) {
+    try {
+      const { file, count } = await backend.uploadSupplementary(p, job.file, (loaded, total) => {
+        job.progress = total ? loaded / total : 0;
+        if (ui.selectedId === p.id) renderSupp(p);
+      });
+      const list = Array.isArray(supp.lists.get(p.id)) ? supp.lists.get(p.id) : [];
+      list.push(file);
+      list.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+      supp.lists.set(p.id, list);
+      p.suppCount = count;
+      added++;
+    } catch (e) {
+      fail(e, 'Uploading ' + job.name);
+    } finally {
+      ups.splice(ups.indexOf(job), 1);
+      if (ui.selectedId === p.id) renderSupp(p);
+    }
+  }
+  if (!ups.length) supp.uploads.delete(p.id);
+  renderSoon();
+  if (added) toast(`Added ${added} supplementary file${added > 1 ? 's' : ''} to “${displayTitle(p)}”.`);
+}
+
+async function renameSupp(p, fileId) {
+  const f = supp.lists.get(p.id)?.find?.((x) => x.id === fileId);
+  if (!f) return;
+  const name = await askName('Rename supplementary file', f.name, 'Rename');
+  if (!name || name === f.name) return;
+  try {
+    await backend.renameSupplementary(fileId, name);
+    f.name = name;
+    renderSupp(p);
+  } catch (e) {
+    fail(e, 'Renaming');
+  }
+}
+
+async function removeSupp(p, fileId) {
+  const f = supp.lists.get(p.id)?.find?.((x) => x.id === fileId);
+  if (!f) return;
+  const r = await dialog({
+    title: 'Remove this supplementary file?',
+    body: el('p', null, C(`“${f.name}” is moved to Google Drive’s trash, where you can still restore it for a while.`).replace('OneDrive’s trash', 'the OneDrive recycle bin')),
+    actions: [{ label: 'Cancel', value: 'cancel' }, { label: 'Remove', value: 'ok', danger: true }],
+  });
+  if (r !== 'ok') return;
+  try {
+    p.suppCount = await backend.deleteSupplementary(p.id, fileId);
+    supp.lists.set(p.id, supp.lists.get(p.id).filter((x) => x.id !== fileId));
+    renderSupp(p);
+    renderSoon();
+  } catch (e) {
+    fail(e, 'Removing ' + f.name);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Actions
 // ---------------------------------------------------------------------------
 function setView(view) {
@@ -679,6 +824,14 @@ function setView(view) {
 
 function currentFolderId() {
   return ui.view.startsWith('coll:') ? ui.view.slice(5) : lib.root.id;
+}
+
+// Supplementary reading mode: the paper on the left, its extra files on the right.
+function openSupp(p, fileId = null) {
+  const q = `id=${encodeURIComponent(p.id)}${CLOUD.id === 'gdrive' ? '' : '&p=' + CLOUD.id}${fileId ? '&open=' + encodeURIComponent(fileId) : ''}`;
+  window.open('supp.html?' + q, '_blank');
+  p.meta.lastRead = new Date().toISOString();
+  renderSoon();
 }
 
 function openPaper(p) {
@@ -812,11 +965,14 @@ async function deleteForever(ids) {
   if (!list.length) return;
   const n = list.length;
   const what = n === 1 ? `“${displayTitle(list[0])}”` : `these ${n} papers`;
+  const suppN = list.reduce((sum, p) => sum + (p.suppCount || 0), 0);
   const r = await dialog({
     title: n === 1 ? 'Delete this paper forever?' : `Delete ${n} papers forever?`,
     body: el('p', null,
       C(`This removes ${what} from Google Drive for good, including Drive’s trash. `) +
-      'Highlights and notes inside the PDF are deleted with it. This can’t be undone.'),
+      'Highlights and notes inside the PDF are deleted with it' +
+      (suppN ? `, and so ${suppN === 1 ? 'is its 1 supplementary file' : `are ${n === 1 ? 'its' : 'their'} ${suppN} supplementary files`}` : '') +
+      '. This can’t be undone.'),
     actions: [
       { label: 'Cancel', value: 'cancel' },
       { label: n === 1 ? 'Delete forever' : `Delete ${n} forever`, value: 'ok', danger: true },
@@ -1495,6 +1651,7 @@ function wire() {
     }
     if (e.target.closest('[data-star]')) return lib.papers.has(id) && toggleStar(p);
     if (e.target.closest('[data-open]')) return lib.papers.has(id) && openPaper(p);
+    if (e.target.closest('[data-supp]')) return lib.papers.has(id) && openSupp(p);
     ui.selectedId = id;
     rows.querySelectorAll('tr.selected').forEach((r) => r.classList.remove('selected'));
     tr.classList.add('selected');
@@ -1589,6 +1746,40 @@ function wire() {
     }
   };
   $('dOpen').onclick = () => lib.papers.has(ui.selectedId) && openPaper(lib.papers.get(ui.selectedId));
+  // Supplementary files
+  const suppPaper = () => lib.papers.get(ui.selectedId);
+  $('dSuppAdd').onclick = () => suppPaper() && $('dSuppInput').click();
+  $('dSuppInput').onchange = (e) => {
+    const p = suppPaper();
+    if (p) addSuppFiles(p, e.target.files);
+    e.target.value = '';
+  };
+  $('dSuppOpen').onclick = () => suppPaper() && openSupp(suppPaper());
+  $('dSuppList').onclick = (e) => {
+    const p = suppPaper();
+    if (!p) return;
+    const t = e.target.closest('[data-open-file],[data-rename],[data-remove]');
+    if (!t) return;
+    if (t.dataset.openFile) openSupp(p, t.dataset.openFile);
+    else if (t.dataset.rename) renameSupp(p, t.dataset.rename);
+    else removeSupp(p, t.dataset.remove);
+  };
+  // Dropping files on the section adds them to this paper (not to the library).
+  const box = $('dSupp');
+  box.addEventListener('dragover', (e) => {
+    if (![...e.dataTransfer.types].includes('Files') || !suppPaper()) return;
+    e.preventDefault();
+    e.stopPropagation();
+    box.classList.add('drop-hover');
+  });
+  box.addEventListener('dragleave', (e) => !box.contains(e.relatedTarget) && box.classList.remove('drop-hover'));
+  box.addEventListener('drop', (e) => {
+    box.classList.remove('drop-hover');
+    if (!e.dataTransfer.files.length || !suppPaper()) return;
+    e.preventDefault();
+    e.stopPropagation();
+    addSuppFiles(suppPaper(), e.dataTransfer.files);
+  });
   $('dDrive').onclick = () => {
     const p = lib.papers.get(ui.selectedId) || lib.trashed.get(ui.selectedId);
     if (p) window.open(p.webViewLink || `https://drive.google.com/file/d/${p.id}/view`, '_blank');

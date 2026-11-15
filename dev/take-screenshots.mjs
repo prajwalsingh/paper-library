@@ -79,7 +79,7 @@ const clickFolder = (name) =>
 const expandFolder = (name) =>
   `[...document.querySelectorAll('.node[data-folder]')].find(n => n.querySelector('.label').textContent === ${JSON.stringify(name)}).querySelector('[data-twist]').click();`;
 const selectRow = (titleStart) =>
-  `[...document.querySelectorAll('#rows tr')].find(r => r.querySelector('.c-title').textContent.startsWith(${JSON.stringify(titleStart)})).querySelector('.c-title').click();`;
+  `[...document.querySelectorAll('#rows tr')].find(r => r.querySelector('.c-title').title.startsWith(${JSON.stringify(titleStart)})).querySelector('.c-title').click();`;
 
 try {
   // 1. Library overview (light)
@@ -179,6 +179,17 @@ try {
   `);
   await sleep(200);
   await shot('setup-onedrive.png');
+
+  // 8. Supplementary reading mode: the paper beside two open supplementary files
+  await open(`${BASE}/supp.html?id=mock0008`);
+  await evaluate(`
+    const sec = (t) => [...document.querySelectorAll('.acc-sec')].find((s) => s.textContent.includes(t));
+    document.getElementById('btnCollapseAll').click();
+    sec('Figure S1').querySelector('.acc-toggle').click();
+    sec('Data S2').querySelector('.acc-toggle').click();
+  `);
+  await sleep(1500);
+  await shot('supplementary.png');
 } catch (e) {
   console.error('Screenshot step failed:', e.message);
   process.exitCode = 1;
