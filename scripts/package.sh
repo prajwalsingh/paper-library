@@ -21,6 +21,9 @@ trap 'rm -rf "$STAGE"' EXIT
 mkdir -p "$STAGE/paper-library" dist
 cp -r "${FILES[@]}" "$STAGE/paper-library/"
 cp docs/PRIVACY.md docs/SETUP.md "$STAGE/paper-library/"
+# Same date on every file (the last commit's), so the same code always gives the same zip and checksum.
+STAMP=$(git log -1 --format=%cI 2>/dev/null || echo 2026-01-01T00:00:00Z)
+find "$STAGE" -exec touch -h -d "$STAMP" {} +
 rm -f "$OUT"
 # One top-level folder, so unzipping doesn't scatter files. -X drops extra
 # file attributes so the zip only depends on the file contents and names.
